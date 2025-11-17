@@ -1,0 +1,153 @@
+import { Business } from '@/types';
+
+export const BUSINESSES: Business[] = [
+  // QVB - Main landmark
+  {
+    id: 'qvb',
+    name: 'Queen Victoria Building (QVB)',
+    category: 'Shopping Center',
+    lat: -33.8718,
+    lng: 151.2067,
+    priceRange: '$$$',
+    description: 'A stunning heritage building housing over 180 retailers, cafes, and restaurants. Built in 1898, the QVB is one of Sydney\'s most iconic landmarks featuring beautiful stained glass windows, intricate tiled floors, and elegant Victorian architecture. The building contains a mix of fashion boutiques, specialty stores, and dining options across its three levels.',
+    hours: 'Mon-Wed: 9am-6pm, Thu: 9am-9pm, Fri-Sat: 9am-6pm, Sun: 11am-5pm',
+    phone: '(02) 9264 9209',
+    rating: 4.7,
+  },
+  // Chinatown area (visible on map)
+  {
+    id: 'biz_001',
+    name: 'Market City Food Court',
+    category: 'Food Court',
+    lat: -33.8788,
+    lng: 151.2045,
+    priceRange: '$',
+    description: 'Multiple food vendors in one convenient location offering Asian cuisines, fresh produce, and specialty items',
+    hours: 'Daily: 10am-9pm',
+  },
+  {
+    id: 'biz_002',
+    name: 'Chat Thai',
+    category: 'Thai',
+    lat: -33.8785,
+    lng: 151.2048,
+    priceRange: '$$',
+    description: 'Authentic Thai dishes',
+  },
+  // Haymarket area
+  {
+    id: 'biz_003',
+    name: 'Golden Century',
+    category: 'Chinese',
+    lat: -33.8795,
+    lng: 151.2050,
+    priceRange: '$$$',
+    description: 'Popular seafood and Cantonese cuisine',
+  },
+  {
+    id: 'biz_004',
+    name: 'Gumshara Ramen',
+    category: 'Japanese',
+    lat: -33.8790,
+    lng: 151.2049,
+    priceRange: '$$',
+    description: 'Rich tonkotsu ramen',
+  },
+  {
+    id: 'biz_005',
+    name: 'Mamak',
+    category: 'Malaysian',
+    lat: -33.8792,
+    lng: 151.2052,
+    priceRange: '$',
+    description: 'Casual Malaysian street food',
+  },
+  {
+    id: 'biz_006',
+    name: "Emperor's Garden",
+    category: 'Chinese',
+    lat: -33.8789,
+    lng: 151.2046,
+    priceRange: '$$',
+    description: 'Dim sum and BBQ favorites',
+  },
+  // Darling Square area
+  {
+    id: 'biz_007',
+    name: 'Darling Square Cafe',
+    category: 'Cafe',
+    lat: -33.8755,
+    lng: 151.2020,
+    priceRange: '$$',
+    description: 'Modern cafe with great coffee',
+  },
+  {
+    id: 'biz_008',
+    name: 'Capitol Square Food',
+    category: 'Food Court',
+    lat: -33.8765,
+    lng: 151.2065,
+    priceRange: '$',
+    description: 'Multiple food options',
+  },
+  // CBD area
+  {
+    id: 'biz_009',
+    name: 'Pitt Street Cafe',
+    category: 'Cafe',
+    lat: -33.8720,
+    lng: 151.2090,
+    priceRange: '$$',
+    description: 'Quick coffee and snacks',
+  },
+  {
+    id: 'biz_010',
+    name: 'George Street Eats',
+    category: 'Fast Food',
+    lat: -33.8650,
+    lng: 151.2075,
+    priceRange: '$',
+    description: 'Fast casual dining',
+  },
+  {
+    id: 'biz_011',
+    name: 'King Street Diner',
+    category: 'Cafe',
+    lat: -33.8640,
+    lng: 151.2078,
+    priceRange: '$$',
+    description: 'All-day breakfast and lunch',
+  },
+  {
+    id: 'biz_012',
+    name: 'Market Street Food Hall',
+    category: 'Food Court',
+    lat: -33.8680,
+    lng: 151.2080,
+    priceRange: '$',
+    description: 'Various cuisines available',
+  },
+  {
+    id: 'biz_013',
+    name: 'Bathurst Street Grill',
+    category: 'Mexican',
+    lat: -33.8710,
+    lng: 151.2070,
+    priceRange: '$$',
+    description: 'Mexican and grill specialties',
+  },
+  // Additional spread across map
+  ...Array.from({ length: 17 }).map((_, i) => ({
+    id: `biz_${(14 + i).toString().padStart(3, '0')}`,
+    name: `${['Cafe', 'Restaurant', 'Food Hub', 'Eatery', 'Dining'][i % 5]} ${14 + i}`,
+    category: ['Cafe', 'Chinese', 'Thai', 'Fast Food', 'Mexican'][
+      (14 + i) % 5
+    ],
+    lat: -33.8650 - (i * 0.0015),
+    lng: 151.2040 + (i * 0.001),
+    priceRange: (['$', '$$', '$$$'] as const)[(14 + i) % 3],
+    description: 'Great food and atmosphere',
+  })),
+];
+
+

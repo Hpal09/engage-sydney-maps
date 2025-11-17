@@ -1,0 +1,2784 @@
+[
+  {
+    "id": "_10_Shelley_Street_Car_Park",
+    "name": "10 Shelley Street Car Park",
+    "svgX": 319.005,
+    "svgY": 319.725,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -1.47,
+      "minY": -3.39,
+      "maxX": 639.48,
+      "maxY": 642.84
+    }
+  },
+  {
+    "id": "_275_Kent",
+    "name": "275 Kent",
+    "svgX": 313.305,
+    "svgY": 314.02500000000003,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -1.47,
+      "minY": -3.39,
+      "maxX": 628.08,
+      "maxY": 631.44
+    }
+  },
+  {
+    "id": "Allen_C_Lewis_Fountain",
+    "name": "Allen C Lewis Fountain",
+    "svgX": 627.31,
+    "svgY": 298.28,
+    "layer": "rooms",
+    "bbox": {
+      "minX": 624.3699999999999,
+      "minY": 295.34,
+      "maxX": 630.25,
+      "maxY": 301.21999999999997
+    }
+  },
+  {
+    "id": "Argyle_Cut",
+    "name": "Argyle Cut",
+    "svgX": 179.095,
+    "svgY": 177.89499999999998,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -1.9,
+      "minY": -2.74,
+      "maxX": 360.09,
+      "maxY": 358.53
+    }
+  },
+  {
+    "id": "Artwork_Ahead",
+    "name": "Artwork Ahead",
+    "svgX": 190.55499999999998,
+    "svgY": 189.595,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -1.86,
+      "minY": -1.48,
+      "maxX": 382.96999999999997,
+      "maxY": 380.67
+    }
+  },
+  {
+    "id": "Athena",
+    "name": "Athena",
+    "svgX": 165.705,
+    "svgY": 371.345,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -1.02,
+      "minY": -0.9,
+      "maxX": 332.43,
+      "maxY": 743.59
+    }
+  },
+  {
+    "id": "Australia_s_First_Road",
+    "name": "Australia&amp;apos;s First Road",
+    "svgX": 218.60000000000002,
+    "svgY": 217.39499999999998,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -1.9,
+      "minY": -2.74,
+      "maxX": 439.1,
+      "maxY": 437.53
+    }
+  },
+  {
+    "id": "Bligh_Barney_Reserve",
+    "name": "Bligh &amp;amp; Barney Reserve",
+    "svgX": 223.55,
+    "svgY": 222.28500000000003,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -1.51,
+      "minY": -1.09,
+      "maxX": 448.61,
+      "maxY": 445.66
+    }
+  },
+  {
+    "id": "Bridge_Stairs",
+    "name": "Bridge Stairs",
+    "svgX": 172.68,
+    "svgY": 171.905,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -0.87,
+      "minY": -0.91,
+      "maxX": 346.23,
+      "maxY": 344.72
+    }
+  },
+  {
+    "id": "Bunker_s_Hill",
+    "name": "Bunker&amp;apos;s Hill",
+    "svgX": 202.535,
+    "svgY": 201.76,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -0.87,
+      "minY": -0.91,
+      "maxX": 405.94,
+      "maxY": 404.43
+    }
+  },
+  {
+    "id": "Cahill_Bridge_Walk_Lookout",
+    "name": "Cahill Bridge Walk Lookout",
+    "svgX": 245.645,
+    "svgY": 244.875,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -0.87,
+      "minY": -0.91,
+      "maxX": 492.16,
+      "maxY": 490.66
+    }
+  },
+  {
+    "id": "Cahill_Walk_Lookout",
+    "name": "Cahill Walk Lookout",
+    "svgX": 292.175,
+    "svgY": 291.40500000000003,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -0.87,
+      "minY": -0.91,
+      "maxX": 585.22,
+      "maxY": 583.72
+    }
+  },
+  {
+    "id": "Campbells_Cove",
+    "name": "Campbells Cove",
+    "svgX": 233.91,
+    "svgY": 233.135,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -0.87,
+      "minY": -0.91,
+      "maxX": 468.69,
+      "maxY": 467.18
+    }
+  },
+  {
+    "id": "Capitol_Square_Car_Park",
+    "name": "Capitol Square Car Park",
+    "svgX": 660.59,
+    "svgY": 661.31,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -1.47,
+      "minY": -3.39,
+      "maxX": 1322.65,
+      "maxY": 1326.01
+    }
+  },
+  {
+    "id": "Car_Park_-_Pitt_St",
+    "name": "Car Park - Pitt St",
+    "svgX": 481.52,
+    "svgY": 482.24,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -1.47,
+      "minY": -3.39,
+      "maxX": 964.51,
+      "maxY": 967.87
+    }
+  },
+  {
+    "id": "Centotaph",
+    "name": "Centotaph",
+    "svgX": 196.365,
+    "svgY": 362.57000000000005,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -1.02,
+      "minY": -0.9,
+      "maxX": 393.75,
+      "maxY": 726.0400000000001
+    }
+  },
+  {
+    "id": "CH1",
+    "name": "CH1",
+    "svgX": 129.77,
+    "svgY": 712.4050000000001,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -7.13,
+      "minY": -2.36,
+      "maxX": 266.67,
+      "maxY": 1427.17
+    }
+  },
+  {
+    "id": "CH10",
+    "name": "CH10",
+    "svgX": 284.345,
+    "svgY": 1439.195,
+    "layer": "rooms",
+    "bbox": {
+      "minX": 281.19,
+      "minY": 1436.11,
+      "maxX": 287.5,
+      "maxY": 1442.28
+    }
+  },
+  {
+    "id": "CH11",
+    "name": "CH11",
+    "svgX": 277.735,
+    "svgY": 1449.44,
+    "layer": "rooms",
+    "bbox": {
+      "minX": 275.08,
+      "minY": 1446.73,
+      "maxX": 280.39,
+      "maxY": 1452.15
+    }
+  },
+  {
+    "id": "CH12",
+    "name": "CH12",
+    "svgX": 290.94,
+    "svgY": 1445.9,
+    "layer": "rooms",
+    "bbox": {
+      "minX": 288.36,
+      "minY": 1443.07,
+      "maxX": 293.52,
+      "maxY": 1448.73
+    }
+  },
+  {
+    "id": "CH13",
+    "name": "CH13",
+    "svgX": 279.555,
+    "svgY": 1452.4450000000002,
+    "layer": "rooms",
+    "bbox": {
+      "minX": 276.69,
+      "minY": 1449.49,
+      "maxX": 282.42,
+      "maxY": 1455.4
+    }
+  },
+  {
+    "id": "CH14",
+    "name": "CH14",
+    "svgX": 267.25,
+    "svgY": 1461.135,
+    "layer": "rooms",
+    "bbox": {
+      "minX": 261.82,
+      "minY": 1457.95,
+      "maxX": 272.68,
+      "maxY": 1464.32
+    }
+  },
+  {
+    "id": "CH15",
+    "name": "CH15",
+    "svgX": 118.445,
+    "svgY": 708.755,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -8.06,
+      "minY": -1.98,
+      "maxX": 244.95,
+      "maxY": 1419.49
+    }
+  },
+  {
+    "id": "CH16",
+    "name": "CH16",
+    "svgX": 255.325,
+    "svgY": 1474.33,
+    "layer": "rooms",
+    "bbox": {
+      "minX": 253.14,
+      "minY": 1472.37,
+      "maxX": 257.51,
+      "maxY": 1476.29
+    }
+  },
+  {
+    "id": "CH17",
+    "name": "CH17",
+    "svgX": 126.185,
+    "svgY": 739.725,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -1.76,
+      "minY": -0.95,
+      "maxX": 254.13,
+      "maxY": 1480.4
+    }
+  },
+  {
+    "id": "CH18",
+    "name": "CH18",
+    "svgX": 256.245,
+    "svgY": 1479.82,
+    "layer": "rooms",
+    "bbox": {
+      "minX": 254.46,
+      "minY": 1478.54,
+      "maxX": 258.03,
+      "maxY": 1481.1
+    }
+  },
+  {
+    "id": "CH19",
+    "name": "CH19",
+    "svgX": 252.485,
+    "svgY": 1481.0549999999998,
+    "layer": "rooms",
+    "bbox": {
+      "minX": 251.06,
+      "minY": 1479.53,
+      "maxX": 253.91,
+      "maxY": 1482.58
+    }
+  },
+  {
+    "id": "CH2",
+    "name": "CH2",
+    "svgX": 269.91999999999996,
+    "svgY": 1431.9,
+    "layer": "rooms",
+    "bbox": {
+      "minX": 265.83,
+      "minY": 1429.9,
+      "maxX": 274.01,
+      "maxY": 1433.9
+    }
+  },
+  {
+    "id": "CH20",
+    "name": "CH20",
+    "svgX": 232.565,
+    "svgY": 1483.895,
+    "layer": "rooms",
+    "bbox": {
+      "minX": 230.42,
+      "minY": 1482.54,
+      "maxX": 234.71,
+      "maxY": 1485.25
+    }
+  },
+  {
+    "id": "CH21",
+    "name": "CH21",
+    "svgX": 234.35500000000002,
+    "svgY": 1478.94,
+    "layer": "rooms",
+    "bbox": {
+      "minX": 231.66,
+      "minY": 1477.48,
+      "maxX": 237.05,
+      "maxY": 1480.4
+    }
+  },
+  {
+    "id": "CH22",
+    "name": "CH22",
+    "svgX": 266.985,
+    "svgY": 1439.165,
+    "layer": "rooms",
+    "bbox": {
+      "minX": 264.51,
+      "minY": 1437.17,
+      "maxX": 269.46,
+      "maxY": 1441.16
+    }
+  },
+  {
+    "id": "CH23",
+    "name": "CH23",
+    "svgX": 235.315,
+    "svgY": 1475.855,
+    "layer": "rooms",
+    "bbox": {
+      "minX": 232.65,
+      "minY": 1474.12,
+      "maxX": 237.98,
+      "maxY": 1477.59
+    }
+  },
+  {
+    "id": "CH24",
+    "name": "CH24",
+    "svgX": 225.82,
+    "svgY": 1473.025,
+    "layer": "rooms",
+    "bbox": {
+      "minX": 224.17,
+      "minY": 1471.45,
+      "maxX": 227.47,
+      "maxY": 1474.6
+    }
+  },
+  {
+    "id": "CH25",
+    "name": "CH25",
+    "svgX": 234.97,
+    "svgY": 1472.72,
+    "layer": "rooms",
+    "bbox": {
+      "minX": 231.12,
+      "minY": 1470.95,
+      "maxX": 238.82,
+      "maxY": 1474.49
+    }
+  },
+  {
+    "id": "CH26",
+    "name": "CH26",
+    "svgX": 265.295,
+    "svgY": 1443.345,
+    "layer": "rooms",
+    "bbox": {
+      "minX": 263.11,
+      "minY": 1442.29,
+      "maxX": 267.48,
+      "maxY": 1444.4
+    }
+  },
+  {
+    "id": "CH27",
+    "name": "CH27",
+    "svgX": 265.65,
+    "svgY": 1444.53,
+    "layer": "rooms",
+    "bbox": {
+      "minX": 264.27,
+      "minY": 1443.85,
+      "maxX": 267.03,
+      "maxY": 1445.21
+    }
+  },
+  {
+    "id": "CH28",
+    "name": "CH28",
+    "svgX": 225.965,
+    "svgY": 1470.065,
+    "layer": "rooms",
+    "bbox": {
+      "minX": 223.62,
+      "minY": 1468.68,
+      "maxX": 228.31,
+      "maxY": 1471.45
+    }
+  },
+  {
+    "id": "CH29",
+    "name": "CH29",
+    "svgX": 109.19999999999999,
+    "svgY": 733.845,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -4.49,
+      "minY": -1.75,
+      "maxX": 222.89,
+      "maxY": 1469.44
+    }
+  },
+  {
+    "id": "CH3",
+    "name": "CH3",
+    "svgX": 268.84000000000003,
+    "svgY": 1434.475,
+    "layer": "rooms",
+    "bbox": {
+      "minX": 265.25,
+      "minY": 1432.63,
+      "maxX": 272.43,
+      "maxY": 1436.32
+    }
+  },
+  {
+    "id": "CH30",
+    "name": "CH30",
+    "svgX": 237.68,
+    "svgY": 1465.77,
+    "layer": "rooms",
+    "bbox": {
+      "minX": 235.18,
+      "minY": 1464.3,
+      "maxX": 240.18,
+      "maxY": 1467.24
+    }
+  },
+  {
+    "id": "CH31",
+    "name": "CH31",
+    "svgX": 267.63,
+    "svgY": 1437.23,
+    "layer": "rooms",
+    "bbox": {
+      "minX": 264.94,
+      "minY": 1436.11,
+      "maxX": 270.32,
+      "maxY": 1438.35
+    }
+  },
+  {
+    "id": "CH32",
+    "name": "CH32",
+    "svgX": 220.025,
+    "svgY": 1457.98,
+    "layer": "rooms",
+    "bbox": {
+      "minX": 217.08,
+      "minY": 1455.91,
+      "maxX": 222.97,
+      "maxY": 1460.05
+    }
+  },
+  {
+    "id": "CH33",
+    "name": "CH33",
+    "svgX": 118.06,
+    "svgY": 726.13,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -3.31,
+      "minY": -3.46,
+      "maxX": 239.43,
+      "maxY": 1455.72
+    }
+  },
+  {
+    "id": "CH34",
+    "name": "CH34",
+    "svgX": 236.33999999999997,
+    "svgY": 1455.53,
+    "layer": "rooms",
+    "bbox": {
+      "minX": 234.39,
+      "minY": 1454.31,
+      "maxX": 238.29,
+      "maxY": 1456.75
+    }
+  },
+  {
+    "id": "CH35",
+    "name": "CH35",
+    "svgX": 231.76,
+    "svgY": 1454.4850000000001,
+    "layer": "rooms",
+    "bbox": {
+      "minX": 229.48,
+      "minY": 1452.91,
+      "maxX": 234.04,
+      "maxY": 1456.06
+    }
+  },
+  {
+    "id": "CH36",
+    "name": "CH36",
+    "svgX": 231.135,
+    "svgY": 1456.52,
+    "layer": "rooms",
+    "bbox": {
+      "minX": 229.07,
+      "minY": 1455.5,
+      "maxX": 233.2,
+      "maxY": 1457.54
+    }
+  },
+  {
+    "id": "CH37",
+    "name": "CH37",
+    "svgX": 242.325,
+    "svgY": 1443.13,
+    "layer": "rooms",
+    "bbox": {
+      "minX": 239.24,
+      "minY": 1441.69,
+      "maxX": 245.41,
+      "maxY": 1444.57
+    }
+  },
+  {
+    "id": "CH38",
+    "name": "CH38",
+    "svgX": 243.17000000000002,
+    "svgY": 1440.945,
+    "layer": "rooms",
+    "bbox": {
+      "minX": 239.34,
+      "minY": 1439.1,
+      "maxX": 247,
+      "maxY": 1442.79
+    }
+  },
+  {
+    "id": "CH39",
+    "name": "CH39",
+    "svgX": 115.47,
+    "svgY": 717.34,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -8.48,
+      "minY": -1.95,
+      "maxX": 239.42,
+      "maxY": 1436.63
+    }
+  },
+  {
+    "id": "CH4",
+    "name": "CH4",
+    "svgX": 270.545,
+    "svgY": 1429.49,
+    "layer": "rooms",
+    "bbox": {
+      "minX": 268.18,
+      "minY": 1427.97,
+      "maxX": 272.91,
+      "maxY": 1431.01
+    }
+  },
+  {
+    "id": "CH40",
+    "name": "CH40",
+    "svgX": 245.45,
+    "svgY": 1434.325,
+    "layer": "rooms",
+    "bbox": {
+      "minX": 242.79,
+      "minY": 1431.97,
+      "maxX": 248.11,
+      "maxY": 1436.68
+    }
+  },
+  {
+    "id": "CH41",
+    "name": "CH41",
+    "svgX": 118.83,
+    "svgY": 710.8199999999999,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -6.62,
+      "minY": -1.98,
+      "maxX": 244.28,
+      "maxY": 1423.62
+    }
+  },
+  {
+    "id": "CH42",
+    "name": "CH42",
+    "svgX": 222.785,
+    "svgY": 1437.2649999999999,
+    "layer": "rooms",
+    "bbox": {
+      "minX": 219.43,
+      "minY": 1435.98,
+      "maxX": 226.14,
+      "maxY": 1438.55
+    }
+  },
+  {
+    "id": "CH43",
+    "name": "CH43",
+    "svgX": 220.315,
+    "svgY": 1434.2350000000001,
+    "layer": "rooms",
+    "bbox": {
+      "minX": 217.36,
+      "minY": 1432.57,
+      "maxX": 223.27,
+      "maxY": 1435.9
+    }
+  },
+  {
+    "id": "CH44",
+    "name": "CH44",
+    "svgX": 268.11,
+    "svgY": 1436.08,
+    "layer": "rooms",
+    "bbox": {
+      "minX": 264.71,
+      "minY": 1434.74,
+      "maxX": 271.51,
+      "maxY": 1437.42
+    }
+  },
+  {
+    "id": "CH45",
+    "name": "CH45",
+    "svgX": 255.89499999999998,
+    "svgY": 1477.415,
+    "layer": "rooms",
+    "bbox": {
+      "minX": 253.76,
+      "minY": 1476.16,
+      "maxX": 258.03,
+      "maxY": 1478.67
+    }
+  },
+  {
+    "id": "CH46",
+    "name": "CH46",
+    "svgX": 230.22,
+    "svgY": 1419.54,
+    "layer": "rooms",
+    "bbox": {
+      "minX": 225.75,
+      "minY": 1417.1,
+      "maxX": 234.69,
+      "maxY": 1421.98
+    }
+  },
+  {
+    "id": "CH47",
+    "name": "CH47",
+    "svgX": 84.295,
+    "svgY": 670.33,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -16.46,
+      "minY": -14.05,
+      "maxX": 185.05,
+      "maxY": 1354.71
+    }
+  },
+  {
+    "id": "CH48",
+    "name": "CH48",
+    "svgX": 91.935,
+    "svgY": 655.415,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -7.38,
+      "minY": -21.95,
+      "maxX": 191.25,
+      "maxY": 1332.78
+    }
+  },
+  {
+    "id": "CH49",
+    "name": "CH49",
+    "svgX": 155.02499999999998,
+    "svgY": 1372.24,
+    "layer": "rooms",
+    "bbox": {
+      "minX": 149.95,
+      "minY": 1369.79,
+      "maxX": 160.1,
+      "maxY": 1374.69
+    }
+  },
+  {
+    "id": "CH5",
+    "name": "CH5",
+    "svgX": 265.23,
+    "svgY": 1445.65,
+    "layer": "rooms",
+    "bbox": {
+      "minX": 262.77,
+      "minY": 1444.52,
+      "maxX": 267.69,
+      "maxY": 1446.78
+    }
+  },
+  {
+    "id": "CH51",
+    "name": "CH51",
+    "svgX": 263.95500000000004,
+    "svgY": 1450.185,
+    "layer": "rooms",
+    "bbox": {
+      "minX": 262.04,
+      "minY": 1449.38,
+      "maxX": 265.87,
+      "maxY": 1450.99
+    }
+  },
+  {
+    "id": "CH52",
+    "name": "CH52",
+    "svgX": 263.835,
+    "svgY": 1451.24,
+    "layer": "rooms",
+    "bbox": {
+      "minX": 261.21,
+      "minY": 1450.25,
+      "maxX": 266.46,
+      "maxY": 1452.23
+    }
+  },
+  {
+    "id": "CH53",
+    "name": "CH53",
+    "svgX": 238.4,
+    "svgY": 1463.52,
+    "layer": "rooms",
+    "bbox": {
+      "minX": 235.58,
+      "minY": 1461.92,
+      "maxX": 241.22,
+      "maxY": 1465.12
+    }
+  },
+  {
+    "id": "CH54",
+    "name": "CH54",
+    "svgX": 236.73000000000002,
+    "svgY": 1468.4099999999999,
+    "layer": "rooms",
+    "bbox": {
+      "minX": 233.5,
+      "minY": 1466.56,
+      "maxX": 239.96,
+      "maxY": 1470.26
+    }
+  },
+  {
+    "id": "CH55",
+    "name": "CH55",
+    "svgX": 233.04000000000002,
+    "svgY": 1481.2199999999998,
+    "layer": "rooms",
+    "bbox": {
+      "minX": 229.97,
+      "minY": 1479.61,
+      "maxX": 236.11,
+      "maxY": 1482.83
+    }
+  },
+  {
+    "id": "CH56",
+    "name": "CH56",
+    "svgX": 112.73,
+    "svgY": 737.73,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -1.62,
+      "minY": -1.81,
+      "maxX": 227.08,
+      "maxY": 1477.27
+    }
+  },
+  {
+    "id": "CH57",
+    "name": "CH57",
+    "svgX": 105.075,
+    "svgY": 725.6800000000001,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -5.47,
+      "minY": -2.08,
+      "maxX": 215.62,
+      "maxY": 1453.44
+    }
+  },
+  {
+    "id": "CH58",
+    "name": "CH58",
+    "svgX": 238.79500000000002,
+    "svgY": 1431.245,
+    "layer": "rooms",
+    "bbox": {
+      "minX": 235.97,
+      "minY": 1428.76,
+      "maxX": 241.62,
+      "maxY": 1433.73
+    }
+  },
+  {
+    "id": "CH59",
+    "name": "CH59",
+    "svgX": 58.21000000000001,
+    "svgY": 740.1,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -13.16,
+      "minY": -6.97,
+      "maxX": 129.58,
+      "maxY": 1487.17
+    }
+  },
+  {
+    "id": "CH6",
+    "name": "CH6",
+    "svgX": 265.93,
+    "svgY": 1441.685,
+    "layer": "rooms",
+    "bbox": {
+      "minX": 264.38,
+      "minY": 1440.35,
+      "maxX": 267.48,
+      "maxY": 1443.02
+    }
+  },
+  {
+    "id": "CH60",
+    "name": "CH60",
+    "svgX": 85.65,
+    "svgY": 703.74,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -2.63,
+      "minY": -4.01,
+      "maxX": 173.93,
+      "maxY": 1411.49
+    }
+  },
+  {
+    "id": "CH62",
+    "name": "CH62",
+    "svgX": 282.255,
+    "svgY": 1434.605,
+    "layer": "rooms",
+    "bbox": {
+      "minX": 279.27,
+      "minY": 1432.34,
+      "maxX": 285.24,
+      "maxY": 1436.87
+    }
+  },
+  {
+    "id": "CH63",
+    "name": "CH63",
+    "svgX": 292.31,
+    "svgY": 1441.3899999999999,
+    "layer": "rooms",
+    "bbox": {
+      "minX": 289.36,
+      "minY": 1438.76,
+      "maxX": 295.26,
+      "maxY": 1444.02
+    }
+  },
+  {
+    "id": "CH7",
+    "name": "CH7",
+    "svgX": 265.02,
+    "svgY": 1446.9099999999999,
+    "layer": "rooms",
+    "bbox": {
+      "minX": 261.74,
+      "minY": 1445.52,
+      "maxX": 268.3,
+      "maxY": 1448.3
+    }
+  },
+  {
+    "id": "CH8",
+    "name": "CH8",
+    "svgX": 264.385,
+    "svgY": 1448.5500000000002,
+    "layer": "rooms",
+    "bbox": {
+      "minX": 262.25,
+      "minY": 1447.18,
+      "maxX": 266.52,
+      "maxY": 1449.92
+    }
+  },
+  {
+    "id": "CH9",
+    "name": "CH9",
+    "svgX": 263.815,
+    "svgY": 1452.835,
+    "layer": "rooms",
+    "bbox": {
+      "minX": 261.21,
+      "minY": 1451.49,
+      "maxX": 266.42,
+      "maxY": 1454.18
+    }
+  },
+  {
+    "id": "Cinema_Centre_Car_Park",
+    "name": "Cinema Centre Car Park",
+    "svgX": 546.155,
+    "svgY": 546.875,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -1.47,
+      "minY": -3.39,
+      "maxX": 1093.78,
+      "maxY": 1097.14
+    }
+  },
+  {
+    "id": "Circular_Quay_Harbour_Lookout",
+    "name": "Circular Quay Harbour Lookout",
+    "svgX": 250.905,
+    "svgY": 250.13,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -0.87,
+      "minY": -0.91,
+      "maxX": 502.68,
+      "maxY": 501.17
+    }
+  },
+  {
+    "id": "City_Centre",
+    "name": "City Centre",
+    "svgX": 381.20000000000005,
+    "svgY": 565.7850000000001,
+    "layer": "base",
+    "bbox": {
+      "minX": -49.18,
+      "minY": -125.58,
+      "maxX": 811.58,
+      "maxY": 1257.15
+    }
+  },
+  {
+    "id": "Clyne_Reserve",
+    "name": "Clyne Reserve",
+    "svgX": 92.84,
+    "svgY": 93.92999999999999,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -1.51,
+      "minY": -1.09,
+      "maxX": 187.19,
+      "maxY": 188.95
+    }
+  },
+  {
+    "id": "Darling_Square",
+    "name": "Darling Square",
+    "svgX": 91.065,
+    "svgY": 632.8850000000001,
+    "layer": "base",
+    "bbox": {
+      "minX": -27.94,
+      "minY": -22.37,
+      "maxX": 210.07,
+      "maxY": 1288.14
+    }
+  },
+  {
+    "id": "Dawes_Point_Batttery",
+    "name": "Dawes Point Batttery",
+    "svgX": 231.37,
+    "svgY": 230.17,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -1.9,
+      "minY": -2.74,
+      "maxX": 464.64,
+      "maxY": 463.08
+    }
+  },
+  {
+    "id": "Dawes_Point_Reserve",
+    "name": "Dawes Point Reserve",
+    "svgX": 228.435,
+    "svgY": 227.17000000000002,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -1.51,
+      "minY": -1.09,
+      "maxX": 458.38,
+      "maxY": 455.43
+    }
+  },
+  {
+    "id": "Divvy_Parking",
+    "name": "Divvy Parking",
+    "svgX": 209.04999999999998,
+    "svgY": 209.77,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -1.47,
+      "minY": -3.39,
+      "maxX": 419.57,
+      "maxY": 422.93
+    }
+  },
+  {
+    "id": "Dobell_Memorial_Sculpture",
+    "name": "Dobell Memorial Sculpture",
+    "svgX": 298.40999999999997,
+    "svgY": 299.42,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -1.86,
+      "minY": -1.48,
+      "maxX": 598.68,
+      "maxY": 600.32
+    }
+  },
+  {
+    "id": "Enacon_Parking",
+    "name": "Enacon Parking",
+    "svgX": 288.55,
+    "svgY": 286.62,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -1.47,
+      "minY": -3.39,
+      "maxX": 578.57,
+      "maxY": 576.63
+    }
+  },
+  {
+    "id": "Eyes_on_the_Bricks",
+    "name": "Eyes on the Bricks",
+    "svgX": 300.435,
+    "svgY": 299.46999999999997,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -1.86,
+      "minY": -1.48,
+      "maxX": 602.73,
+      "maxY": 600.42
+    }
+  },
+  {
+    "id": "First_Fleet_Park",
+    "name": "First Fleet Park",
+    "svgX": 221.595,
+    "svgY": 220.33,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -1.51,
+      "minY": -1.09,
+      "maxX": 444.7,
+      "maxY": 441.75
+    }
+  },
+  {
+    "id": "First_Parking_100_Bathurst_St",
+    "name": "First Parking 100 Bathurst St",
+    "svgX": 534.0749999999999,
+    "svgY": 534.795,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -1.47,
+      "minY": -3.39,
+      "maxX": 1069.62,
+      "maxY": 1072.98
+    }
+  },
+  {
+    "id": "First_Parking_Darling_Square_Car_Park",
+    "name": "First Parking Darling Square Car Park",
+    "svgX": 625,
+    "svgY": 625.72,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -1.47,
+      "minY": -3.39,
+      "maxX": 1251.47,
+      "maxY": 1254.8300000000002
+    }
+  },
+  {
+    "id": "First_Parking_Meriton_528_Kent_St",
+    "name": "First Parking Meriton 528 Kent St",
+    "svgX": 576.355,
+    "svgY": 577.0749999999999,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -1.47,
+      "minY": -3.39,
+      "maxX": 1154.18,
+      "maxY": 1157.54
+    }
+  },
+  {
+    "id": "Forgotten_Songs",
+    "name": "Forgotten Songs",
+    "svgX": 355.97499999999997,
+    "svgY": 356.985,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -1.86,
+      "minY": -1.48,
+      "maxX": 713.81,
+      "maxY": 715.45
+    }
+  },
+  {
+    "id": "Former_Officer_s_Quarters",
+    "name": "Former Officer&amp;apos;s Quarters",
+    "svgX": 214.13000000000002,
+    "svgY": 212.93,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -1.9,
+      "minY": -2.74,
+      "maxX": 430.16,
+      "maxY": 428.6
+    }
+  },
+  {
+    "id": "Garden_of_Cloud_and_Stone",
+    "name": "Garden of Cloud and Stone",
+    "svgX": 688.955,
+    "svgY": 689.965,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -1.86,
+      "minY": -1.48,
+      "maxX": 1379.77,
+      "maxY": 1381.41
+    }
+  },
+  {
+    "id": "Harbour_Bridge_Lookout",
+    "name": "Harbour Bridge Lookout",
+    "svgX": 320.44500000000005,
+    "svgY": 319.675,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -0.87,
+      "minY": -0.91,
+      "maxX": 641.7600000000001,
+      "maxY": 640.26
+    }
+  },
+  {
+    "id": "Harbour_Bridge_Lookout-2",
+    "name": "Harbour Bridge Lookout",
+    "svgX": 368.885,
+    "svgY": 369.845,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -0.87,
+      "minY": -0.91,
+      "maxX": 738.64,
+      "maxY": 740.6
+    }
+  },
+  {
+    "id": "Haymarket",
+    "name": "Haymarket",
+    "svgX": 171.245,
+    "svgY": 787.1800000000001,
+    "layer": "base",
+    "bbox": {
+      "minX": -42.51,
+      "minY": -49.54,
+      "maxX": 385,
+      "maxY": 1623.9
+    }
+  },
+  {
+    "id": "Hickson_Park",
+    "name": "Hickson Park",
+    "svgX": 240.03,
+    "svgY": 241.12,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -1.51,
+      "minY": -1.09,
+      "maxX": 481.57,
+      "maxY": 483.33
+    }
+  },
+  {
+    "id": "Hickson_Road_Reserve",
+    "name": "Hickson Road Reserve",
+    "svgX": 246.42000000000002,
+    "svgY": 245.155,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -1.51,
+      "minY": -1.09,
+      "maxX": 494.35,
+      "maxY": 491.4
+    }
+  },
+  {
+    "id": "Hicksons_Steps",
+    "name": "Hicksons Steps",
+    "svgX": 201.79000000000002,
+    "svgY": 200.585,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -1.9,
+      "minY": -2.74,
+      "maxX": 405.48,
+      "maxY": 403.91
+    }
+  },
+  {
+    "id": "Hiickson_Road_Reserve",
+    "name": "Hiickson Road Reserve",
+    "svgX": 249.6,
+    "svgY": 248.825,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -0.87,
+      "minY": -0.91,
+      "maxX": 500.07,
+      "maxY": 498.56
+    }
+  },
+  {
+    "id": "In_Between_Two_Worlds",
+    "name": "In Between Two Worlds",
+    "svgX": 638.6550000000001,
+    "svgY": 639.665,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -1.86,
+      "minY": -1.48,
+      "maxX": 1279.17,
+      "maxY": 1280.81
+    }
+  },
+  {
+    "id": "Intercontinental_Parking",
+    "name": "Intercontinental Parking",
+    "svgX": 288.65000000000003,
+    "svgY": 286.72,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -1.47,
+      "minY": -3.39,
+      "maxX": 578.7700000000001,
+      "maxY": 576.83
+    }
+  },
+  {
+    "id": "Interloop",
+    "name": "Interloop",
+    "svgX": 325.375,
+    "svgY": 326.385,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -1.86,
+      "minY": -1.48,
+      "maxX": 652.61,
+      "maxY": 654.25
+    }
+  },
+  {
+    "id": "Jenny_Munro_Mural",
+    "name": "Jenny Munro Mural",
+    "svgX": 614.72,
+    "svgY": 615.73,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -1.86,
+      "minY": -1.48,
+      "maxX": 1231.3,
+      "maxY": 1232.94
+    }
+  },
+  {
+    "id": "Jessie_Street_Gardens",
+    "name": "Jessie Street Gardens",
+    "svgX": 246.755,
+    "svgY": 245.49,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -1.51,
+      "minY": -1.09,
+      "maxX": 495.02,
+      "maxY": 492.07
+    }
+  },
+  {
+    "id": "John_Christie_Wright_Memorial_Fountain",
+    "name": "John Christie Wright Memorial Fountain",
+    "svgX": 486.67,
+    "svgY": 502.27,
+    "layer": "rooms",
+    "bbox": {
+      "minX": 483.73,
+      "minY": 499.33,
+      "maxX": 489.61,
+      "maxY": 505.21
+    }
+  },
+  {
+    "id": "John_Dunmore_Lang",
+    "name": "John Dunmore Lang",
+    "svgX": 159.025,
+    "svgY": 310.285,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -1.02,
+      "minY": -0.9,
+      "maxX": 319.07,
+      "maxY": 621.47
+    }
+  },
+  {
+    "id": "Lang_Park",
+    "name": "Lang Park",
+    "svgX": 267.195,
+    "svgY": 268.29,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -1.51,
+      "minY": -1.09,
+      "maxX": 535.9,
+      "maxY": 537.6700000000001
+    }
+  },
+  {
+    "id": "Lloyd_Rees",
+    "name": "Lloyd Rees",
+    "svgX": 170.535,
+    "svgY": 501.91,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -1.02,
+      "minY": -0.9,
+      "maxX": 342.09,
+      "maxY": 1004.72
+    }
+  },
+  {
+    "id": "Lloyd_Rees_Fountain",
+    "name": "Lloyd Rees Fountain",
+    "svgX": 424.77,
+    "svgY": 731.77,
+    "layer": "rooms",
+    "bbox": {
+      "minX": 421.83,
+      "minY": 728.8299999999999,
+      "maxX": 427.71,
+      "maxY": 734.71
+    }
+  },
+  {
+    "id": "m50006",
+    "name": "m50006",
+    "svgX": 214.23000000000002,
+    "svgY": 213.735,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -3.27,
+      "minY": -2.4,
+      "maxX": 431.73,
+      "maxY": 429.87
+    }
+  },
+  {
+    "id": "m50006-2",
+    "name": "m50006",
+    "svgX": 312.575,
+    "svgY": 148.74,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -3.27,
+      "minY": -2.4,
+      "maxX": 628.42,
+      "maxY": 299.88
+    }
+  },
+  {
+    "id": "m50006-3",
+    "name": "m50006",
+    "svgX": 211.305,
+    "svgY": 365.485,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -3.27,
+      "minY": -2.4,
+      "maxX": 425.88,
+      "maxY": 733.37
+    }
+  },
+  {
+    "id": "m50006-4",
+    "name": "m50006",
+    "svgX": 242.26000000000002,
+    "svgY": 250.735,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -3.27,
+      "minY": -2.4,
+      "maxX": 487.79,
+      "maxY": 503.87
+    }
+  },
+  {
+    "id": "Macquarie_Place_Park",
+    "name": "Macquarie Place Park",
+    "svgX": 254.83,
+    "svgY": 255.92500000000004,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -1.51,
+      "minY": -1.09,
+      "maxX": 511.17,
+      "maxY": 512.94
+    }
+  },
+  {
+    "id": "Marrinawi_Cove_Lookout",
+    "name": "Marrinawi Cove Lookout",
+    "svgX": 76.17,
+    "svgY": 75.395,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -0.87,
+      "minY": -0.91,
+      "maxX": 153.21,
+      "maxY": 151.7
+    }
+  },
+  {
+    "id": "Munn_Reserve",
+    "name": "Munn Reserve",
+    "svgX": 127.83000000000001,
+    "svgY": 128.925,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -1.51,
+      "minY": -1.09,
+      "maxX": 257.17,
+      "maxY": 258.94
+    }
+  },
+  {
+    "id": "Munn_Street_Reserve",
+    "name": "Munn Street Reserve",
+    "svgX": 133.115,
+    "svgY": 134.205,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -1.51,
+      "minY": -1.09,
+      "maxX": 267.74,
+      "maxY": 269.5
+    }
+  },
+  {
+    "id": "Munn_s_Slipway",
+    "name": "Munn&amp;apos;s Slipway",
+    "svgX": 140.93,
+    "svgY": 142.76,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -1.9,
+      "minY": -2.74,
+      "maxX": 283.76,
+      "maxY": 288.26
+    }
+  },
+  {
+    "id": "Mural_on_Gloucester_Street",
+    "name": "Mural on Gloucester Street",
+    "svgX": 196.665,
+    "svgY": 197.67499999999998,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -1.86,
+      "minY": -1.48,
+      "maxX": 395.19,
+      "maxY": 396.83
+    }
+  },
+  {
+    "id": "Nita_McCrae_Park",
+    "name": "Nita McCrae Park",
+    "svgX": 140.74,
+    "svgY": 141.83,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -1.51,
+      "minY": -1.09,
+      "maxX": 282.99,
+      "maxY": 284.75
+    }
+  },
+  {
+    "id": "Number_One_Dixon_Car_Park",
+    "name": "Number One Dixon Car Park",
+    "svgX": 580.6999999999999,
+    "svgY": 581.42,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -1.47,
+      "minY": -3.39,
+      "maxX": 1162.87,
+      "maxY": 1166.23
+    }
+  },
+  {
+    "id": "Observatory_Hill",
+    "name": "Observatory Hill",
+    "svgX": 156.265,
+    "svgY": 157.225,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -0.87,
+      "minY": -0.91,
+      "maxX": 313.4,
+      "maxY": 315.36
+    }
+  },
+  {
+    "id": "Observatory_Hill_Park",
+    "name": "Observatory Hill Park",
+    "svgX": 165.615,
+    "svgY": 166.705,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -1.51,
+      "minY": -1.09,
+      "maxX": 332.74,
+      "maxY": 334.5
+    }
+  },
+  {
+    "id": "Overseas_Passenger_Terminal_Car_Park",
+    "name": "Overseas Passenger Terminal Car Park",
+    "svgX": 222.885,
+    "svgY": 220.96,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -1.47,
+      "minY": -3.39,
+      "maxX": 447.24,
+      "maxY": 445.31
+    }
+  },
+  {
+    "id": "Pao_Cha",
+    "name": "Pao Cha",
+    "svgX": 621.335,
+    "svgY": 622.345,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -1.86,
+      "minY": -1.48,
+      "maxX": 1244.53,
+      "maxY": 1246.17
+    }
+  },
+  {
+    "id": "Parking_Lot",
+    "name": "Parking Lot",
+    "svgX": 202.44,
+    "svgY": 200.51500000000001,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -1.47,
+      "minY": -3.39,
+      "maxX": 406.35,
+      "maxY": 404.42
+    }
+  },
+  {
+    "id": "Point_Parking_-_World_Square",
+    "name": "Point Parking - World Square",
+    "svgX": 614.04,
+    "svgY": 614.76,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -1.47,
+      "minY": -3.39,
+      "maxX": 1229.55,
+      "maxY": 1232.91
+    }
+  },
+  {
+    "id": "Public_Toilet_Barangaroo",
+    "name": "Public Toilet Barangaroo",
+    "svgX": 139.41,
+    "svgY": 634.61,
+    "layer": "rooms",
+    "bbox": {
+      "minX": 136.47,
+      "minY": 631.67,
+      "maxX": 142.35,
+      "maxY": 637.5500000000001
+    }
+  },
+  {
+    "id": "Public_Toilet_Circular_Quay_1",
+    "name": "Public Toilet Circular Quay 1",
+    "svgX": 540.4,
+    "svgY": 418.45,
+    "layer": "rooms",
+    "bbox": {
+      "minX": 537.4599999999999,
+      "minY": 415.51,
+      "maxX": 543.34,
+      "maxY": 421.39
+    }
+  },
+  {
+    "id": "Public_Toilet_Circular_Quay_2",
+    "name": "Public Toilet Circular Quay 2",
+    "svgX": 473.8,
+    "svgY": 415.55,
+    "layer": "rooms",
+    "bbox": {
+      "minX": 470.86,
+      "minY": 412.61,
+      "maxX": 476.74,
+      "maxY": 418.49
+    }
+  },
+  {
+    "id": "Public_Toilet_Circular_Quay_East",
+    "name": "Public Toilet Circular Quay East",
+    "svgX": 614.9,
+    "svgY": 294.75,
+    "layer": "rooms",
+    "bbox": {
+      "minX": 611.9599999999999,
+      "minY": 291.81,
+      "maxX": 617.84,
+      "maxY": 297.69
+    }
+  },
+  {
+    "id": "Public_Toilet_Cumberland_Street",
+    "name": "Public Toilet Cumberland Street",
+    "svgX": 398.66,
+    "svgY": 177.09,
+    "layer": "rooms",
+    "bbox": {
+      "minX": 395.72,
+      "minY": 174.15,
+      "maxX": 401.6,
+      "maxY": 180.03
+    }
+  },
+  {
+    "id": "Public_Toilet_Hickson_Road",
+    "name": "Public Toilet Hickson Road",
+    "svgX": 407.17,
+    "svgY": 98.81,
+    "layer": "rooms",
+    "bbox": {
+      "minX": 404.23,
+      "minY": 95.87,
+      "maxX": 410.11,
+      "maxY": 101.75
+    }
+  },
+  {
+    "id": "Public_Toilet_Watson_Road",
+    "name": "Public Toilet Watson Road",
+    "svgX": 258.2,
+    "svgY": 282.4,
+    "layer": "rooms",
+    "bbox": {
+      "minX": 255.26,
+      "minY": 279.46,
+      "maxX": 261.14,
+      "maxY": 285.34
+    }
+  },
+  {
+    "id": "Public_Toilet_Wynyard_Park",
+    "name": "Public Toilet Wynyard Park",
+    "svgX": 293.99,
+    "svgY": 678.47,
+    "layer": "rooms",
+    "bbox": {
+      "minX": 291.05,
+      "minY": 675.53,
+      "maxX": 296.93,
+      "maxY": 681.4100000000001
+    }
+  },
+  {
+    "id": "Public_Toilets_300_Barangaroo_Ave",
+    "name": "Public Toilets 300 Barangaroo Ave",
+    "svgX": 136.51,
+    "svgY": 605.21,
+    "layer": "rooms",
+    "bbox": {
+      "minX": 133.57,
+      "minY": 602.27,
+      "maxX": 139.45,
+      "maxY": 608.1500000000001
+    }
+  },
+  {
+    "id": "Public_Toilets_Barangaroo_Reserve",
+    "name": "Public Toilets Barangaroo Reserve",
+    "svgX": 151.08,
+    "svgY": 143.11,
+    "layer": "rooms",
+    "bbox": {
+      "minX": 148.14000000000001,
+      "minY": 140.17000000000002,
+      "maxX": 154.02,
+      "maxY": 146.05
+    }
+  },
+  {
+    "id": "Public_Toilets_Cambridge_Street",
+    "name": "Public Toilets Cambridge Street",
+    "svgX": 381.31,
+    "svgY": 338.4,
+    "layer": "rooms",
+    "bbox": {
+      "minX": 378.37,
+      "minY": 335.46,
+      "maxX": 384.25,
+      "maxY": 341.34
+    }
+  },
+  {
+    "id": "Public_Toilets_Chinese_Garden_of_Friendship",
+    "name": "Public Toilets Chinese Garden of Friendship",
+    "svgX": 194.16,
+    "svgY": 1143.71,
+    "layer": "rooms",
+    "bbox": {
+      "minX": 191.22,
+      "minY": 1140.77,
+      "maxX": 197.1,
+      "maxY": 1146.65
+    }
+  },
+  {
+    "id": "Public_Toilets_Darling_Quarter",
+    "name": "Public Toilets Darling Quarter",
+    "svgX": 93.86,
+    "svgY": 1117.01,
+    "layer": "rooms",
+    "bbox": {
+      "minX": 90.92,
+      "minY": 1114.07,
+      "maxX": 96.8,
+      "maxY": 1119.95
+    }
+  },
+  {
+    "id": "Public_Toilets_Darling_Square",
+    "name": "Public Toilets Darling Square",
+    "svgX": 167.76,
+    "svgY": 1252.41,
+    "layer": "rooms",
+    "bbox": {
+      "minX": 164.82,
+      "minY": 1249.47,
+      "maxX": 170.7,
+      "maxY": 1255.3500000000001
+    }
+  },
+  {
+    "id": "Public_Toilets_Exchange_Place",
+    "name": "Public Toilets Exchange Place",
+    "svgX": 143.71,
+    "svgY": 648.91,
+    "layer": "rooms",
+    "bbox": {
+      "minX": 140.77,
+      "minY": 645.9699999999999,
+      "maxX": 146.65,
+      "maxY": 651.85
+    }
+  },
+  {
+    "id": "Public_Toilets_Greenway_Lane",
+    "name": "Public Toilets Greenway Lane",
+    "svgX": 410.56,
+    "svgY": 325.4,
+    "layer": "rooms",
+    "bbox": {
+      "minX": 407.62,
+      "minY": 322.46,
+      "maxX": 413.5,
+      "maxY": 328.34
+    }
+  },
+  {
+    "id": "Public_Toilets_Haymarket",
+    "name": "Public Toilets Haymarket",
+    "svgX": 215.02,
+    "svgY": 1351.83,
+    "layer": "rooms",
+    "bbox": {
+      "minX": 212.08,
+      "minY": 1348.8899999999999,
+      "maxX": 217.96,
+      "maxY": 1354.77
+    }
+  },
+  {
+    "id": "Public_Toilets_Pier_Street",
+    "name": "Public Toilets Pier Street",
+    "svgX": 152.16,
+    "svgY": 1215.91,
+    "layer": "rooms",
+    "bbox": {
+      "minX": 149.22,
+      "minY": 1212.97,
+      "maxX": 155.1,
+      "maxY": 1218.8500000000001
+    }
+  },
+  {
+    "id": "Public_Toilets_The_Rocks_Centre",
+    "name": "Public Toilets The Rocks Centre",
+    "svgX": 389.41,
+    "svgY": 279.36,
+    "layer": "rooms",
+    "bbox": {
+      "minX": 386.47,
+      "minY": 276.42,
+      "maxX": 392.35,
+      "maxY": 282.3
+    }
+  },
+  {
+    "id": "Queen_Victoria",
+    "name": "Queen Victoria",
+    "svgX": 174.57500000000002,
+    "svgY": 495.07500000000005,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -1.02,
+      "minY": -0.9,
+      "maxX": 350.17,
+      "maxY": 991.0500000000001
+    }
+  },
+  {
+    "id": "Queen_Victoria-2",
+    "name": "Queen Victoria",
+    "svgX": 171.11,
+    "svgY": 494.88500000000005,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -1.02,
+      "minY": -0.9,
+      "maxX": 343.24,
+      "maxY": 990.6700000000001
+    }
+  },
+  {
+    "id": "QVB",
+    "name": "QVB",
+    "svgX": 176.3,
+    "svgY": 472.265,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -1.37,
+      "minY": -3.74,
+      "maxX": 353.97,
+      "maxY": 948.27
+    }
+  },
+  {
+    "id": "Rialto_Square_Car_Park",
+    "name": "Rialto Square Car Park",
+    "svgX": 533.875,
+    "svgY": 534.595,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -1.47,
+      "minY": -3.39,
+      "maxX": 1069.22,
+      "maxY": 1072.5800000000002
+    }
+  },
+  {
+    "id": "Roads-2",
+    "name": "Roads",
+    "svgX": 150.965,
+    "svgY": 722.11,
+    "layer": "base",
+    "bbox": {
+      "minX": -28.08,
+      "minY": -68.7,
+      "maxX": 330.01,
+      "maxY": 1512.92
+    }
+  },
+  {
+    "id": "Rotuna_Observation_Deck",
+    "name": "Rotuna Observation Deck",
+    "svgX": 247.68,
+    "svgY": 246.905,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -0.87,
+      "minY": -0.91,
+      "maxX": 496.23,
+      "maxY": 494.72
+    }
+  },
+  {
+    "id": "Sculpture_in_honour_of_Marconi",
+    "name": "Sculpture in honour of Marconi",
+    "svgX": 509.515,
+    "svgY": 510.52500000000003,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -1.86,
+      "minY": -1.48,
+      "maxX": 1020.89,
+      "maxY": 1022.5300000000001
+    }
+  },
+  {
+    "id": "Sea_Wall_Lawn",
+    "name": "Sea Wall Lawn",
+    "svgX": 81.585,
+    "svgY": 82.55,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -0.87,
+      "minY": -0.91,
+      "maxX": 164.04,
+      "maxY": 166.01
+    }
+  },
+  {
+    "id": "Secure_Parking_-_109_Pitt_Street",
+    "name": "Secure Parking - 109 Pitt Street",
+    "svgX": 328.91999999999996,
+    "svgY": 329.64000000000004,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -1.47,
+      "minY": -3.39,
+      "maxX": 659.31,
+      "maxY": 662.6700000000001
+    }
+  },
+  {
+    "id": "Secure_Parking_-_2_Market_Street",
+    "name": "Secure Parking - 2 Market Street",
+    "svgX": 444.445,
+    "svgY": 445.165,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -1.47,
+      "minY": -3.39,
+      "maxX": 890.36,
+      "maxY": 893.72
+    }
+  },
+  {
+    "id": "Secure_Parking_-_204_Kent_Street",
+    "name": "Secure Parking - 204 Kent Street",
+    "svgX": 299.44,
+    "svgY": 300.16,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -1.47,
+      "minY": -3.39,
+      "maxX": 600.35,
+      "maxY": 603.71
+    }
+  },
+  {
+    "id": "Secure_Parking_-_Circular_Quay",
+    "name": "Secure Parking - Circular Quay",
+    "svgX": 228.52499999999998,
+    "svgY": 229.245,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -1.47,
+      "minY": -3.39,
+      "maxX": 458.52,
+      "maxY": 461.88
+    }
+  },
+  {
+    "id": "Secure_Parking_-_King_Street_Wharf",
+    "name": "Secure Parking - King Street Wharf",
+    "svgX": 328.255,
+    "svgY": 328.975,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -1.47,
+      "minY": -3.39,
+      "maxX": 657.98,
+      "maxY": 661.34
+    }
+  },
+  {
+    "id": "Secure_Parking_-_No.1_Marting_Place",
+    "name": "Secure Parking - No.1 Marting Place",
+    "svgX": 377.46,
+    "svgY": 378.18,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -1.47,
+      "minY": -3.39,
+      "maxX": 756.39,
+      "maxY": 759.75
+    }
+  },
+  {
+    "id": "Secure_Parking_George_Place",
+    "name": "Secure Parking George Place",
+    "svgX": 385.87,
+    "svgY": 386.59000000000003,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -1.47,
+      "minY": -3.39,
+      "maxX": 773.21,
+      "maxY": 776.57
+    }
+  },
+  {
+    "id": "Sir_Stamford_at_Circular_Quay",
+    "name": "Sir Stamford at Circular Quay",
+    "svgX": 295.1,
+    "svgY": 293.17,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -1.47,
+      "minY": -3.39,
+      "maxX": 591.6700000000001,
+      "maxY": 589.73
+    }
+  },
+  {
+    "id": "Sirius_Anchor",
+    "name": "Sirius Anchor",
+    "svgX": 254.03,
+    "svgY": 255.85500000000002,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -1.9,
+      "minY": -2.74,
+      "maxX": 509.96,
+      "maxY": 514.45
+    }
+  },
+  {
+    "id": "Stargazer_Lawn",
+    "name": "Stargazer Lawn",
+    "svgX": 118.50500000000001,
+    "svgY": 119.6,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -1.51,
+      "minY": -1.09,
+      "maxX": 238.52,
+      "maxY": 240.29
+    }
+  },
+  {
+    "id": "Still_Life_with_Stone_and_Car",
+    "name": "Still Life with Stone and Car",
+    "svgX": 181.545,
+    "svgY": 180.58499999999998,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -1.86,
+      "minY": -1.48,
+      "maxX": 364.95,
+      "maxY": 362.65
+    }
+  },
+  {
+    "id": "Suez_Canal",
+    "name": "Suez Canal",
+    "svgX": 202.245,
+    "svgY": 201.045,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -1.9,
+      "minY": -2.74,
+      "maxX": 406.39,
+      "maxY": 404.83
+    }
+  },
+  {
+    "id": "Sun_Parking",
+    "name": "Sun Parking",
+    "svgX": 335.755,
+    "svgY": 336.475,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -1.47,
+      "minY": -3.39,
+      "maxX": 672.98,
+      "maxY": 676.34
+    }
+  },
+  {
+    "id": "Sydney_Cove_Map",
+    "name": "Sydney Cove Map",
+    "svgX": 225.3,
+    "svgY": 224.1,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -1.9,
+      "minY": -2.74,
+      "maxX": 452.5,
+      "maxY": 450.94
+    }
+  },
+  {
+    "id": "Tallawoladah_Lawn",
+    "name": "Tallawoladah Lawn",
+    "svgX": 226.675,
+    "svgY": 225.41000000000003,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -1.51,
+      "minY": -1.09,
+      "maxX": 454.86,
+      "maxY": 451.91
+    }
+  },
+  {
+    "id": "Tank_Stream_Fountain",
+    "name": "Tank Stream Fountain",
+    "svgX": 430.61,
+    "svgY": 428.27,
+    "layer": "rooms",
+    "bbox": {
+      "minX": 427.67,
+      "minY": 425.33,
+      "maxX": 433.55,
+      "maxY": 431.21
+    }
+  },
+  {
+    "id": "The_Beacon",
+    "name": "The Beacon",
+    "svgX": 227.22,
+    "svgY": 226.01999999999998,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -1.9,
+      "minY": -2.74,
+      "maxX": 456.34,
+      "maxY": 454.78
+    }
+  },
+  {
+    "id": "The_Big_Dig",
+    "name": "The Big Dig",
+    "svgX": 181.995,
+    "svgY": 183.82,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -1.9,
+      "minY": -2.74,
+      "maxX": 365.89,
+      "maxY": 370.38
+    }
+  },
+  {
+    "id": "The_Kakadue",
+    "name": "The Kakadue",
+    "svgX": 181.515,
+    "svgY": 182.52499999999998,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -1.86,
+      "minY": -1.48,
+      "maxX": 364.89,
+      "maxY": 366.53
+    }
+  },
+  {
+    "id": "The_Paddoc_Park",
+    "name": "The Paddoc Park",
+    "svgX": 149.475,
+    "svgY": 148.21,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -1.51,
+      "minY": -1.09,
+      "maxX": 300.46,
+      "maxY": 297.51
+    }
+  },
+  {
+    "id": "The_Rocks",
+    "name": "The Rocks",
+    "svgX": 242.27999999999997,
+    "svgY": 209.97,
+    "layer": "base",
+    "bbox": {
+      "minX": -131.33,
+      "minY": -93.18,
+      "maxX": 615.89,
+      "maxY": 513.12
+    }
+  },
+  {
+    "id": "The_Rocks-3",
+    "name": "The Rocks",
+    "svgX": 204.565,
+    "svgY": 154.1,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -1.37,
+      "minY": -0.74,
+      "maxX": 410.5,
+      "maxY": 308.94
+    }
+  },
+  {
+    "id": "Thomas_Sutcliff_Mort",
+    "name": "Thomas Sutcliff Mort",
+    "svgX": 239.285,
+    "svgY": 261.19000000000005,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -1.02,
+      "minY": -0.9,
+      "maxX": 479.59,
+      "maxY": 523.2800000000001
+    }
+  },
+  {
+    "id": "Titantic_Display",
+    "name": "Titantic Display",
+    "svgX": 129.375,
+    "svgY": 128.17,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -1.9,
+      "minY": -2.74,
+      "maxX": 260.65,
+      "maxY": 259.08
+    }
+  },
+  {
+    "id": "To_sail_to_stop",
+    "name": "To sail, to stop",
+    "svgX": 504.03,
+    "svgY": 505.04,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -1.86,
+      "minY": -1.48,
+      "maxX": 1009.92,
+      "maxY": 1011.5600000000001
+    }
+  },
+  {
+    "id": "Townsplace_Wharf",
+    "name": "Townsplace Wharf",
+    "svgX": 95.74499999999999,
+    "svgY": 94.97,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -0.87,
+      "minY": -0.91,
+      "maxX": 192.35999999999999,
+      "maxY": 190.85
+    }
+  },
+  {
+    "id": "Trinity_Avenue_Playground",
+    "name": "Trinity Avenue Playground",
+    "svgX": 165.84,
+    "svgY": 125.565,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -1.99,
+      "minY": -1.45,
+      "maxX": 333.67,
+      "maxY": 252.57999999999998
+    }
+  },
+  {
+    "id": "Unwins_Stores",
+    "name": "Unwins Stores",
+    "svgX": 216.18,
+    "svgY": 214.975,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -1.9,
+      "minY": -2.74,
+      "maxX": 434.26,
+      "maxY": 432.69
+    }
+  },
+  {
+    "id": "Waiting_Statue",
+    "name": "Waiting Statue",
+    "svgX": 202.21,
+    "svgY": 306.36500000000007,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -1.02,
+      "minY": -0.9,
+      "maxX": 405.44,
+      "maxY": 613.6300000000001
+    }
+  },
+  {
+    "id": "Walumi_Lawns",
+    "name": "Walumi Lawns",
+    "svgX": 75.04,
+    "svgY": 76.13,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -1.51,
+      "minY": -1.09,
+      "maxX": 151.59,
+      "maxY": 153.35
+    }
+  },
+  {
+    "id": "Wilson_Parking_-_155_George_St",
+    "name": "Wilson Parking - 155 George St",
+    "svgX": 205.29999999999998,
+    "svgY": 203.37,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -1.47,
+      "minY": -3.39,
+      "maxX": 412.07,
+      "maxY": 410.13
+    }
+  },
+  {
+    "id": "Wilson_Parking_-_259_George_Street",
+    "name": "Wilson Parking - 259 George Street",
+    "svgX": 274.59,
+    "svgY": 275.31000000000006,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -1.47,
+      "minY": -3.39,
+      "maxX": 550.65,
+      "maxY": 554.0100000000001
+    }
+  },
+  {
+    "id": "Wilson_Parking_-_321_Kent_Street",
+    "name": "Wilson Parking - 321 Kent Street",
+    "svgX": 353.825,
+    "svgY": 354.545,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -1.47,
+      "minY": -3.39,
+      "maxX": 709.12,
+      "maxY": 712.48
+    }
+  },
+  {
+    "id": "Wilson_Parking_-_383_Kent_Street",
+    "name": "Wilson Parking - 383 Kent Street",
+    "svgX": 424.59499999999997,
+    "svgY": 425.31500000000005,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -1.47,
+      "minY": -3.39,
+      "maxX": 850.66,
+      "maxY": 854.0200000000001
+    }
+  },
+  {
+    "id": "Wilson_Parking_-_60_Elizabeth_Street",
+    "name": "Wilson Parking - 60 Elizabeth Street",
+    "svgX": 382.81,
+    "svgY": 383.53000000000003,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -1.47,
+      "minY": -3.39,
+      "maxX": 767.09,
+      "maxY": 770.45
+    }
+  },
+  {
+    "id": "Wilson_Parking_-_Angel_Place",
+    "name": "Wilson Parking - Angel Place",
+    "svgX": 338.12,
+    "svgY": 338.84000000000003,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -1.47,
+      "minY": -3.39,
+      "maxX": 677.71,
+      "maxY": 681.07
+    }
+  },
+  {
+    "id": "Wilson_Parking_-_Australia_Square",
+    "name": "Wilson Parking - Australia Square",
+    "svgX": 296.69,
+    "svgY": 297.41,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -1.47,
+      "minY": -3.39,
+      "maxX": 594.85,
+      "maxY": 598.21
+    }
+  },
+  {
+    "id": "Wilson_Parking_-_Barangaroo_Point",
+    "name": "Wilson Parking - Barangaroo Point",
+    "svgX": 106.375,
+    "svgY": 107.095,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -1.47,
+      "minY": -3.39,
+      "maxX": 214.22,
+      "maxY": 217.57999999999998
+    }
+  },
+  {
+    "id": "Wilson_Parking_-_Barangaroo_Reserve",
+    "name": "Wilson Parking - Barangaroo Reserve",
+    "svgX": 82.41,
+    "svgY": 83.13000000000001,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -1.47,
+      "minY": -3.39,
+      "maxX": 166.29,
+      "maxY": 169.65
+    }
+  },
+  {
+    "id": "Wilson_Parking_-_Bond_One_Sydney_North",
+    "name": "Wilson Parking - Bond One, Sydney North",
+    "svgX": 112.425,
+    "svgY": 113.14500000000001,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -1.47,
+      "minY": -3.39,
+      "maxX": 226.32,
+      "maxY": 229.68
+    }
+  },
+  {
+    "id": "Wilson_Parking_-_Citipark_Car_Park",
+    "name": "Wilson Parking - Citipark Car Park",
+    "svgX": 463.995,
+    "svgY": 464.71500000000003,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -1.47,
+      "minY": -3.39,
+      "maxX": 929.46,
+      "maxY": 932.82
+    }
+  },
+  {
+    "id": "Wilson_Parking_-_Clocktower_The_Rocks",
+    "name": "Wilson Parking - Clocktower, The Rocks",
+    "svgX": 195.39,
+    "svgY": 193.46,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -1.47,
+      "minY": -3.39,
+      "maxX": 392.25,
+      "maxY": 390.31
+    }
+  },
+  {
+    "id": "Wilson_Parking_-_Clocktower_The_Rocks-2",
+    "name": "Wilson Parking - Clocktower, The Rocks",
+    "svgX": 194.04,
+    "svgY": 192.11,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -1.47,
+      "minY": -3.39,
+      "maxX": 389.55,
+      "maxY": 387.61
+    }
+  },
+  {
+    "id": "Wilson_Parking_-_Darling_Park",
+    "name": "Wilson Parking - Darling Park",
+    "svgX": 467.195,
+    "svgY": 467.915,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -1.47,
+      "minY": -3.39,
+      "maxX": 935.86,
+      "maxY": 939.22
+    }
+  },
+  {
+    "id": "Wilson_Parking_-_Gateway_The_Rocks",
+    "name": "Wilson Parking - Gateway, The Rocks",
+    "svgX": 236.295,
+    "svgY": 234.37,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -1.47,
+      "minY": -3.39,
+      "maxX": 474.06,
+      "maxY": 472.13
+    }
+  },
+  {
+    "id": "Wilson_Parking_-_Grosvenor_Place_The_Rocks",
+    "name": "Wilson Parking - Grosvenor Place, The Rocks",
+    "svgX": 230.98499999999999,
+    "svgY": 231.705,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -1.47,
+      "minY": -3.39,
+      "maxX": 463.44,
+      "maxY": 466.8
+    }
+  },
+  {
+    "id": "Wilson_Parking_-_Market_City",
+    "name": "Wilson Parking - Market City",
+    "svgX": 671.1899999999999,
+    "svgY": 671.91,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -1.47,
+      "minY": -3.39,
+      "maxX": 1343.85,
+      "maxY": 1347.21
+    }
+  },
+  {
+    "id": "Wilson_Parking_-_Quay_West_Sydney",
+    "name": "Wilson Parking - Quay West, Sydney",
+    "svgX": 216.545,
+    "svgY": 217.26500000000001,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -1.47,
+      "minY": -3.39,
+      "maxX": 434.56,
+      "maxY": 437.92
+    }
+  },
+  {
+    "id": "Wilson_Parking_187_Thomas_Street",
+    "name": "Wilson Parking 187 Thomas Street",
+    "svgX": 715.535,
+    "svgY": 716.255,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -1.47,
+      "minY": -3.39,
+      "maxX": 1432.54,
+      "maxY": 1435.9
+    }
+  },
+  {
+    "id": "wilson_Parking_201-207_Kent_Street",
+    "name": "wilson Parking 201-207 Kent Street",
+    "svgX": 284.815,
+    "svgY": 285.535,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -1.47,
+      "minY": -3.39,
+      "maxX": 571.1,
+      "maxY": 574.46
+    }
+  },
+  {
+    "id": "Wilson_Parking_Haymarket",
+    "name": "Wilson Parking Haymarket",
+    "svgX": 706.685,
+    "svgY": 707.405,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -1.47,
+      "minY": -3.39,
+      "maxX": 1414.84,
+      "maxY": 1418.2
+    }
+  },
+  {
+    "id": "Wilson_Parking_Novotel_Sydney",
+    "name": "Wilson Parking Novotel Sydney",
+    "svgX": 727.085,
+    "svgY": 727.805,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -1.47,
+      "minY": -3.39,
+      "maxX": 1455.64,
+      "maxY": 1459
+    }
+  },
+  {
+    "id": "Windmill_Steps",
+    "name": "Windmill Steps",
+    "svgX": 107.27,
+    "svgY": 109.095,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -1.9,
+      "minY": -2.74,
+      "maxX": 216.44,
+      "maxY": 220.93
+    }
+  },
+  {
+    "id": "World_Square_Car_Park",
+    "name": "World Square Car Park",
+    "svgX": 616.14,
+    "svgY": 616.86,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -1.47,
+      "minY": -3.39,
+      "maxX": 1233.75,
+      "maxY": 1237.1100000000001
+    }
+  },
+  {
+    "id": "Wulugu_Walk",
+    "name": "Wulugu Walk",
+    "svgX": 83.72,
+    "svgY": 216.95,
+    "layer": "rooms",
+    "bbox": {
+      "minX": 80.78,
+      "minY": 214.01,
+      "maxX": 86.66,
+      "maxY": 219.89
+    }
+  },
+  {
+    "id": "Wynyard_Park",
+    "name": "Wynyard Park",
+    "svgX": 312.535,
+    "svgY": 313.63,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -1.51,
+      "minY": -1.09,
+      "maxX": 626.58,
+      "maxY": 628.35
+    }
+  },
+  {
+    "id": "Youngsters",
+    "name": "Youngsters",
+    "svgX": 368.42,
+    "svgY": 369.43,
+    "layer": "rooms",
+    "bbox": {
+      "minX": -1.86,
+      "minY": -1.48,
+      "maxX": 738.7,
+      "maxY": 740.34
+    }
+  }
+]

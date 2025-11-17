@@ -1,0 +1,113 @@
+{
+  "nodes": {
+    "int-01": {
+      "id": "int-01",
+      "x": 3517.56,
+      "y": 8154.85,
+      "lat": -33.8637,
+      "lng": 151.2073,
+      "connections": ["int-02", "int-03", "int-05"]
+    },
+    "int-02": {
+      "id": "int-02",
+      "x": 3517.56,
+      "y": 9193.61,
+      "lat": -33.8647,
+      "lng": 151.2073,
+      "connections": ["int-01", "int-04", "int-07"]
+    },
+    "int-03": {
+      "id": "int-03",
+      "x": 4090.09,
+      "y": 8249.76,
+      "lat": -33.8638,
+      "lng": 151.2087,
+      "connections": ["int-01", "int-04"]
+    },
+    "int-04": {
+      "id": "int-04",
+      "x": 4055.68,
+      "y": 9189.76,
+      "lat": -33.8647,
+      "lng": 151.2086,
+      "connections": ["int-02", "int-03", "int-10"]
+    },
+    "int-05": {
+      "id": "int-05",
+      "x": 3557.95,
+      "y": 10285.25,
+      "lat": -33.8658,
+      "lng": 151.2074,
+      "connections": ["int-01", "int-06"]
+    },
+    "int-06": {
+      "id": "int-06",
+      "x": 3473.52,
+      "y": 10988.88,
+      "lat": -33.8665,
+      "lng": 151.2072,
+      "connections": ["int-05", "int-07"]
+    },
+    "int-07": {
+      "id": "int-07",
+      "x": 3203.52,
+      "y": 12023.18,
+      "lat": -33.8676,
+      "lng": 151.2065,
+      "connections": ["int-02", "int-06", "int-08"]
+    },
+    "int-08": {
+      "id": "int-08",
+      "x": 3020.72,
+      "y": 12728.94,
+      "lat": -33.8683,
+      "lng": 151.2060,
+      "connections": ["int-07", "int-09"]
+    },
+    "int-09": {
+      "id": "int-09",
+      "x": 2808.13,
+      "y": 13699.05,
+      "lat": -33.8693,
+      "lng": 151.2055,
+      "connections": ["int-08", "int-10"]
+    },
+    "int-10": {
+      "id": "int-10",
+      "x": 3258.55,
+      "y": 14431.91,
+      "lat": -33.8701,
+      "lng": 151.2066,
+      "connections": ["int-04", "int-09"]
+    }
+  },
+  "edges": {
+    "int-01_int-02": { "from": "int-01", "to": "int-02", "distance": 1038.76 },
+    "int-01_int-03": { "from": "int-01", "to": "int-03", "distance": 582.45 },
+    "int-01_int-05": { "from": "int-01", "to": "int-05", "distance": 2131.15 },
+    "int-02_int-01": { "from": "int-02", "to": "int-01", "distance": 1038.76 },
+    "int-02_int-04": { "from": "int-02", "to": "int-04", "distance": 538.23 },
+    "int-02_int-07": { "from": "int-02", "to": "int-07", "distance": 2886.09 },
+    "int-03_int-01": { "from": "int-03", "to": "int-01", "distance": 582.45 },
+    "int-03_int-04": { "from": "int-03", "to": "int-04", "distance": 941.12 },
+    "int-04_int-02": { "from": "int-04", "to": "int-02", "distance": 538.23 },
+    "int-04_int-03": { "from": "int-04", "to": "int-03", "distance": 941.12 },
+    "int-04_int-10": { "from": "int-04", "to": "int-10", "distance": 5338.28 },
+    "int-05_int-01": { "from": "int-05", "to": "int-01", "distance": 2131.15 },
+    "int-05_int-06": { "from": "int-05", "to": "int-06", "distance": 716.77 },
+    "int-06_int-05": { "from": "int-06", "to": "int-05", "distance": 716.77 },
+    "int-06_int-07": { "from": "int-06", "to": "int-07", "distance": 1071.71 },
+    "int-07_int-02": { "from": "int-07", "to": "int-02", "distance": 2886.09 },
+    "int-07_int-06": { "from": "int-07", "to": "int-06", "distance": 1071.71 },
+    "int-07_int-08": { "from": "int-07", "to": "int-08", "distance": 734.89 },
+    "int-08_int-07": { "from": "int-08", "to": "int-07", "distance": 734.89 },
+    "int-08_int-09": { "from": "int-08", "to": "int-09", "distance": 984.31 },
+    "int-09_int-08": { "from": "int-09", "to": "int-08", "distance": 984.31 },
+    "int-09_int-10": { "from": "int-09", "to": "int-10", "distance": 868.45 },
+    "int-10_int-04": { "from": "int-10", "to": "int-04", "distance": 5338.28 },
+    "int-10_int-09": { "from": "int-10", "to": "int-09", "distance": 868.45 }
+  }
+}
+
+
+

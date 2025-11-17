@@ -1,0 +1,244 @@
+import type { Intersection, PathGraph, PathNode } from '@/types';
+
+function heuristic(a: PathNode, b: PathNode): number {
+  const dx = a.x - b.x;
+  const dy = a.y - b.y;
+  return Math.hypot(dx, dy);
+}
+
+/**
+ * Diagnostic info returned by pathfinding operations
+ */
+export interface PathfindingDiagnostics {
+  route: PathNode[];
+  startNode: PathNode | null;
+  endNode: PathNode | null;
+  startDistance: number;  // Distance from start point to start node (SVG units)
+  endDistance: number;    // Distance from end point to end node (SVG units)
+  algorithm: 'astar' | 'bfs' | 'failed';
+}
+
+/**
+ * Finds the nearest node in the graph to a given point
+ * @param graph - The navigation graph
+ * @param point - Target point with x,y coordinates
+ * @param maxDistance - Maximum acceptable distance (default 500 SVG units)
+ * @returns The nearest node, or null if no node within maxDistance
+ */
+export function findNearestNode(
+  graph: PathGraph,
+  point: { x: number; y: number },
+  maxDistance: number = 500
+): PathNode | null {
+  let best: PathNode | null = null;
+  let bestDist = Infinity;
+
+  for (const node of Object.values(graph.nodesById)) {
+    const d = Math.hypot(node.x - point.x, node.y - point.y);
+    if (d < bestDist) {
+      best = node;
+      bestDist = d;
+    }
+  }
+
+  // Validate distance is within acceptable range
+  if (best && bestDist <= maxDistance) {
+    console.log(`✓ Found nearest node ${best.id} at distance ${bestDist.toFixed(1)} units from point (${point.x.toFixed(1)}, ${point.y.toFixed(1)})`);
+    return best;
+  } else if (best) {
+    console.warn(`⚠️  Nearest node ${best.id} is ${bestDist.toFixed(1)} units away (max allowed: ${maxDistance}) - point may be outside walkable area`);
+    return null;
+  } else {
+    console.error(`❌ No nodes found in graph for point (${point.x.toFixed(1)}, ${point.y.toFixed(1)})`);
+    return null;
+  }
+}
+
+export function reconstructPath(cameFrom: Record<string, string | undefined>, currentId: string): string[] {
+  const path: string[] = [currentId];
+  while (cameFrom[currentId]) {
+    currentId = cameFrom[currentId]!;
+    path.push(currentId);
+  }
+  return path.reverse();
+}
+
+export function findRoute(graph: PathGraph, start: Intersection, end: Intersection): PathNode[] {
+  console.log(`🗺️  Finding route from (${start.x.toFixed(1)}, ${start.y.toFixed(1)}) to (${end.x.toFixed(1)}, ${end.y.toFixed(1)})`);
+
+  const startNode = findNearestNode(graph, { x: start.x, y: start.y });
+  const endNode = findNearestNode(graph, { x: end.x, y: end.y });
+
+  if (!startNode || !endNode) {
+    if (!startNode) console.error('❌ Could not find start node - location may be outside walkable area');
+    if (!endNode) console.error('❌ Could not find end node - location may be outside walkable area');
+    return [];
+  }
+
+  console.log(`🔍 A* search: start=${startNode.id}, end=${endNode.id}`);
+
+  const openSet = new Set<string>([startNode.id]);
+  const cameFrom: Record<string, string | undefined> = {};
+  const gScore: Record<string, number> = {};
+  const fScore: Record<string, number> = {};
+  for (const id of Object.keys(graph.nodesById)) {
+    gScore[id] = Infinity;
+    fScore[id] = Infinity;
+  }
+  gScore[startNode.id] = 0;
+  fScore[startNode.id] = heuristic(startNode, endNode);
+
+  while (openSet.size > 0) {
+    // node in openSet with lowest fScore
+    let currentId = '';
+    let currentScore = Infinity;
+    for (const id of openSet) {
+      if (fScore[id] < currentScore) {
+        currentId = id;
+        currentScore = fScore[id];
+      }
+    }
+    if (!currentId) break;
+
+    if (currentId === endNode.id) {
+      const ids = reconstructPath(cameFrom, currentId);
+      const route = ids.map((id) => graph.nodesById[id]);
+      console.log(`✅ A* route found: ${route.length} nodes, distance: ${gScore[currentId].toFixed(1)} units`);
+      return route;
+    }
+
+    openSet.delete(currentId);
+    for (const edge of graph.adjacency[currentId] ?? []) {
+      const tentative = gScore[currentId] + edge.distance;
+      if (tentative < gScore[edge.to]) {
+        cameFrom[edge.to] = currentId;
+        gScore[edge.to] = tentative;
+        fScore[edge.to] = tentative + heuristic(graph.nodesById[edge.to], endNode);
+        openSet.add(edge.to);
+      }
+    }
+  }
+
+  console.warn(`⚠️  A* failed to find route - no path exists between nodes in connected graph`);
+  return [];
+}
+
+export function findAnyRoute(graph: PathGraph, start: Intersection, end: Intersection): PathNode[] {
+  const startNode = findNearestNode(graph, { x: start.x, y: start.y });
+  const endNode = findNearestNode(graph, { x: end.x, y: end.y });
+  if (!startNode || !endNode) return [];
+
+  const queue: string[] = [startNode.id];
+  const visited = new Set<string>([startNode.id]);
+  const prev: Record<string, string | undefined> = {};
+
+  while (queue.length) {
+    const id = queue.shift()!;
+    if (id === endNode.id) {
+      const ids = reconstructPath(prev, id);
+      return ids.map((nid) => graph.nodesById[nid]);
+    }
+    for (const edge of graph.adjacency[id] ?? []) {
+      if (!visited.has(edge.to)) {
+        visited.add(edge.to);
+        prev[edge.to] = id;
+        queue.push(edge.to);
+      }
+    }
+  }
+  return [];
+}
+
+/**
+ * Find route with progressive fallback and detailed diagnostics
+ *
+ * This function:
+ * 1. Tries A* with default maxDistance (500 units)
+ * 2. If that fails, tries with increased maxDistance (1000, 2000 units)
+ * 3. Falls back to BFS if A* fails
+ * 4. Returns detailed diagnostics for debugging
+ */
+export function findRouteWithDiagnostics(
+  graph: PathGraph,
+  start: Intersection,
+  end: Intersection
+): PathfindingDiagnostics {
+  console.log(`🗺️  Finding route with diagnostics from (${start.x.toFixed(1)}, ${start.y.toFixed(1)}) to (${end.x.toFixed(1)}, ${end.y.toFixed(1)})`);
+
+  // Try progressive distances: 500 → 1000 → 2000 units
+  const maxDistances = [500, 1000, 2000];
+  let startNode: PathNode | null = null;
+  let endNode: PathNode | null = null;
+  let startDistance = Infinity;
+  let endDistance = Infinity;
+
+  for (const maxDist of maxDistances) {
+    startNode = findNearestNode(graph, { x: start.x, y: start.y }, maxDist);
+    endNode = findNearestNode(graph, { x: end.x, y: end.y }, maxDist);
+
+    if (startNode && endNode) {
+      startDistance = Math.hypot(startNode.x - start.x, startNode.y - start.y);
+      endDistance = Math.hypot(endNode.x - end.x, endNode.y - end.y);
+      console.log(`✓ Found nodes with maxDistance=${maxDist}: start=${startNode.id}, end=${endNode.id}`);
+      break;
+    }
+
+    if (maxDist < maxDistances[maxDistances.length - 1]) {
+      console.warn(`⚠️  No nodes found with maxDistance=${maxDist}, trying ${maxDistances[maxDistances.indexOf(maxDist) + 1]}...`);
+    }
+  }
+
+  // If still no nodes found, return failed diagnostic
+  if (!startNode || !endNode) {
+    console.error('❌ Failed to find route nodes even with maximum distance tolerance');
+    return {
+      route: [],
+      startNode: null,
+      endNode: null,
+      startDistance: Infinity,
+      endDistance: Infinity,
+      algorithm: 'failed'
+    };
+  }
+
+  // Try A* first
+  console.log(`🔍 Attempting A* pathfinding...`);
+  const astarRoute = findRoute(graph, start, end);
+  if (astarRoute.length >= 2) {
+    return {
+      route: astarRoute,
+      startNode,
+      endNode,
+      startDistance,
+      endDistance,
+      algorithm: 'astar'
+    };
+  }
+
+  // Fallback to BFS
+  console.log(`🔄 A* failed, trying BFS fallback...`);
+  const bfsRoute = findAnyRoute(graph, start, end);
+  if (bfsRoute.length >= 2) {
+    return {
+      route: bfsRoute,
+      startNode,
+      endNode,
+      startDistance,
+      endDistance,
+      algorithm: 'bfs'
+    };
+  }
+
+  // Both algorithms failed
+  console.error('❌ Both A* and BFS failed to find a route');
+  return {
+    route: [],
+    startNode,
+    endNode,
+    startDistance,
+    endDistance,
+    algorithm: 'failed'
+  };
+}
+
+

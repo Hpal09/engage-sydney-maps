@@ -1,0 +1,92 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Place {
+  id              String    @id @default(cuid())
+  name            String
+  shortDescription String?  @map("short_description")
+  fullDescription  String?  @map("full_description")
+  category        String
+  tags            String[]  // simple string array for now
+  lat             Float
+  lng             Float
+  address         String?
+  websiteUrl      String?   @map("website_url")
+  phone           String?
+  openingHours    String?   @map("opening_hours")
+  priceRange      String?   @map("price_range")  // '$', '$$', '$$$', '$$$$'
+  rating          Float?
+  isLive          Boolean   @default(true) @map("is_live")
+
+  deals           Deal[]
+  events          Event[]
+
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt      @map("updated_at")
+}
+
+model Deal {
+  id          String   @id @default(cuid())
+  place       Place    @relation(fields: [placeId], references: [id])
+  placeId     String   @map("place_id")
+  title       String
+  description String?
+  startsAt    DateTime @map("starts_at")
+  endsAt      DateTime @map("ends_at")
+  isLive      Boolean  @default(true) @map("is_live")
+  tags        String[]
+
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt      @map("updated_at")
+}
+
+model Event {
+  id          String   @id @default(cuid())
+  place       Place?   @relation(fields: [placeId], references: [id])
+  placeId     String?  @map("place_id")
+  title       String
+  description String?
+  startsAt    DateTime @map("starts_at")
+  endsAt      DateTime @map("ends_at")
+  isLive      Boolean  @default(true) @map("is_live")
+  category    String
+  tags        String[]
+
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt      @map("updated_at")
+}
+
+model AdminUser {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  role         String   @default("admin")
+
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt      @map("updated_at")
+}
+
+model MapSettings {
+  id           Int      @id @default(1)
+  initialZoom  Float    @default(2.5)  @map("initial_zoom")
+  placeZoom    Float    @default(2.8)  @map("place_zoom")
+  destZoom     Float    @default(2.8)  @map("dest_zoom")
+  navZoom      Float    @default(3.0)  @map("nav_zoom")
+
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt      @map("updated_at")
+
+  @@map("map_settings")
+}
