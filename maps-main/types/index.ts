@@ -9,6 +9,7 @@ export interface Business {
   description?: string;
   hours?: string;
   phone?: string;
+  website?: string;
   rating?: number;
 }
 
@@ -84,5 +85,4 @@ export interface ZoomConfig {
   destination: number;    // 3) When destination is set / centered
   navigation: number;     // 4) When navigation starts / follow mode
 }
-
 

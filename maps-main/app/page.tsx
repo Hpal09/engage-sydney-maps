@@ -28,6 +28,8 @@ import MapDebugOverlay from '@/components/Debug/MapDebugOverlay';
 
 import type { Business, DeviceLocation, Intersection, PathNode, ZoomConfig } from '@/types';
 
+import type { AIEntryContext } from '@/types/ai';
+
 import type { Deal, Event } from '@/lib/dataService';
 
 import { getIntersectionsWithGps } from '@/data/intersections';
@@ -283,6 +285,16 @@ export default function Page() {
 
   const [selectedTab, setSelectedTab] = useState<'all' | 'deals' | 'events' | 'experiences' | 'places'>('all');
 
+  const aiEntryContext = useMemo<AIEntryContext>(() => {
+    if (keyword.trim()) return { type: 'query', query: keyword.trim() };
+    if (selectedCategory && selectedCategory !== 'All categories') {
+      return { type: 'category', category: selectedCategory };
+    }
+    if (selectedTab === 'deals') return { type: 'category', category: 'deals' };
+    if (selectedTab === 'events' || selectedTab === 'experiences') return { type: 'category', category: 'events' };
+    return { type: 'fresh' };
+  }, [keyword, selectedCategory, selectedTab]);
+
   const [aiMode, setAiMode] = useState(false);
 
   const [pendingQuery, setPendingQuery] = useState<string | undefined>(undefined);
@@ -422,6 +434,41 @@ export default function Page() {
     return map;
 
   }, [allEvents]);
+
+  const handleExitAi = useCallback(() => {
+    setAiMode(false);
+    setPendingQuery(undefined);
+  }, []);
+
+  const handleAiSelectPlace = useCallback((placeId: string) => {
+    const place = allPlaces.find((p) => p.id === placeId);
+    if (!place) {
+      console.warn('AI select place not found', placeId);
+      return;
+    }
+    setSelected(place);
+    setShowLocationModal(true);
+    setCenterOnPoint({ lat: place.lat, lng: place.lng, tick: Date.now(), targetScale: zoomConfig?.destination ?? 2.8 });
+    handleExitAi();
+  }, [allPlaces, handleExitAi, zoomConfig]);
+
+  const handleAiSelectDeal = useCallback((dealId: string) => {
+    const deal = allDeals.find((d) => d.id === dealId);
+    if (!deal || !deal.placeId) {
+      console.warn('AI select deal missing place', { dealId });
+      return;
+    }
+    handleAiSelectPlace(deal.placeId);
+  }, [allDeals, handleAiSelectPlace]);
+
+  const handleAiSelectEvent = useCallback((eventId: string) => {
+    const event = allEvents.find((e) => e.id === eventId);
+    if (!event || !event.placeId) {
+      console.warn('AI select event missing place', { eventId });
+      return;
+    }
+    handleAiSelectPlace(event.placeId);
+  }, [allEvents, handleAiSelectPlace]);
 
 
 
@@ -1784,6 +1831,32 @@ export default function Page() {
   };
 
 
+  const handleAiNavigation = useCallback((destType: 'place' | 'deal' | 'event', destId: string) => {
+    let place: Business | undefined;
+    if (destType === 'place') {
+      place = allPlaces.find((p) => p.id === destId);
+    } else if (destType === 'deal') {
+      const deal = allDeals.find((d) => d.id === destId);
+      if (deal?.placeId) {
+        place = allPlaces.find((p) => p.id === deal.placeId);
+      }
+    } else if (destType === 'event') {
+      const event = allEvents.find((e) => e.id === destId);
+      if (event?.placeId) {
+        place = allPlaces.find((p) => p.id === event.placeId);
+      }
+    }
+
+    if (!place) {
+      console.warn('AI navigation target not found', { destType, destId });
+      return;
+    }
+
+    handleExitAi();
+    setCenterOnPoint({ lat: place.lat, lng: place.lng, tick: Date.now(), targetScale: zoomConfig?.destination ?? 2.8 });
+    handleTakeMeThere(place);
+  }, [allPlaces, allDeals, allEvents, handleExitAi, handleTakeMeThere, zoomConfig]);
+
 
   // Debug: Log what we're passing to the map
 
@@ -2067,7 +2140,10 @@ export default function Page() {
 
               onTabChange={setSelectedTab}
 
-              onOpenAI={() => setAiMode(true)}
+              onOpenAI={() => {
+                setPendingQuery(keyword || undefined);
+                setAiMode(true);
+              }}
 
               suggestions={allPlaces.map(p => ({ id: p.id, name: p.name, category: p.category }))}
 
@@ -2075,49 +2151,27 @@ export default function Page() {
 
           ) : (
 
-            <div className="w-full max-w-xl h-[70vh] rounded-2xl border bg-white shadow-xl">
+            <div className="w-full max-w-xl h-[70vh] rounded-2xl border bg-white shadow-xl overflow-hidden">
 
-              <div className="flex h-full flex-col">
+              <AISearch
 
-                <div className="flex items-center justify-between border-b px-4 py-2">
+                initialQuery={pendingQuery}
 
-                  <div className="font-medium">AI Assistant</div>
+                userLocation={userLocation}
 
-                  <button
+                onSelectPlace={handleAiSelectPlace}
 
-                    className="text-sm text-gray-600 hover:text-gray-900"
+                onSelectDeal={handleAiSelectDeal}
 
-                    onClick={() => {
+                onSelectEvent={handleAiSelectEvent}
 
-                      setAiMode(false);
+                onStartNavigation={handleAiNavigation}
 
-                      setPendingQuery(undefined);
+                onExitAI={handleExitAi}
 
-                    }}
+                entryContext={aiEntryContext}
 
-                  >
-
-                    Close
-
-                  </button>
-
-                </div>
-
-                <div className="h-[calc(70vh-40px)]">
-
-                  <AISearch
-
-                    onBusinessesResult={setVisibleBusinesses}
-
-                    initialQuery={pendingQuery}
-
-                    userLocation={userLocation}
-
-                  />
-
-                </div>
-
-              </div>
+              />
 
             </div>
 
@@ -2422,4 +2476,3 @@ export default function Page() {
   );
 
 }
-

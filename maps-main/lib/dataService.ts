@@ -30,6 +30,7 @@ export async function getPlaces(): Promise<Business[]> {
     description: p.shortDescription ?? p.fullDescription ?? undefined,
     hours: p.openingHours ?? undefined,
     phone: p.phone ?? undefined,
+    website: (p as any).website ?? undefined,
     rating: p.rating ?? undefined,
   }));
 
