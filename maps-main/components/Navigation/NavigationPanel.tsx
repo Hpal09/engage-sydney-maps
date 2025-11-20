@@ -26,9 +26,11 @@ interface Props {
   onSelectMyLocation?: () => void;
   onSelectStartPoint?: (point: Waypoint) => void;
   onStartTurnByTurn?: (start: Waypoint, destination: Waypoint) => void;
+  navigationActive?: boolean;
+  turnByTurnActive?: boolean;
 }
 
-export default function NavigationPanel({ businesses, userLocation, defaultDestination, externalStart, externalDestination, onStartJourney, onClearNavigation, title = 'Engage ByDisrupt', onSelectMyLocation, onSelectStartPoint, onStartTurnByTurn }: Props) {
+export default function NavigationPanel({ businesses, userLocation, defaultDestination, externalStart, externalDestination, onStartJourney, onClearNavigation, title = 'Engage ByDisrupt', onSelectMyLocation, onSelectStartPoint, onStartTurnByTurn, navigationActive = false, turnByTurnActive = false }: Props) {
   const options: Waypoint[] = useMemo(() => {
     const list: Waypoint[] = [];
     if (userLocation) {
@@ -75,9 +77,11 @@ export default function NavigationPanel({ businesses, userLocation, defaultDesti
   // Auto-start route when both points are selected
   useEffect(() => {
     if (start && dest) {
+      console.log('🗺️ Auto-starting route preview:', { start: start.label, dest: dest.label });
       onStartJourney(start, dest);
     }
-  }, [startId, destId, start, dest, onStartJourney]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [startId, destId]); // Only depend on the IDs to avoid re-triggering on function reference changes
 
   // If user picks My location as start, trigger recenter callback
   useEffect(() => {
@@ -138,25 +142,67 @@ export default function NavigationPanel({ businesses, userLocation, defaultDesti
     <div className="pointer-events-auto absolute inset-x-0 bottom-0 z-30 mx-auto w-full max-w-xl p-4">
       <div className="rounded-3xl border bg-white/95 shadow-xl">
         {/* Header / Handle */}
-        <button
-          type="button"
-          aria-expanded={open}
-          onClick={() => setOpen((v) => !v)}
-          className="w-full rounded-t-3xl p-3 pb-2"
-        >
+        <div className="w-full rounded-t-3xl p-3 pb-2">
           <div className="mx-auto mb-2 h-1.5 w-10 rounded-full bg-gray-300" />
           <div className="flex items-center justify-between px-1">
-            <div className="flex min-w-0 items-center gap-2">
+            <button
+              type="button"
+              aria-expanded={open}
+              onClick={() => setOpen((v) => !v)}
+              className="flex min-w-0 flex-1 items-center gap-2"
+            >
               <div className="min-w-0 truncate text-sm font-medium text-gray-900">
                 {areaName ?? title}
                 {summaryText.trip && <span className="ml-2 text-xs font-normal text-gray-500">{summaryText.trip}</span>}
               </div>
-            </div>
-            <div className={`size-6 shrink-0 rounded-full bg-white shadow ring-1 ring-gray-200 flex items-center justify-center transition-transform duration-300 ease-in-out ${open ? 'rotate-180' : ''}`}>
-              <ChevronUp className="h-4 w-4 text-gray-700" />
+            </button>
+            <div className="flex items-center gap-2">
+              {/* Action button in minimized header - only show when panel is collapsed */}
+              {!open && start && dest && (
+                <>
+                  {turnByTurnActive ? (
+                    // Show Stop button when turn-by-turn is active
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onClearNavigation?.();
+                      }}
+                      className="rounded-full bg-red-600 px-4 py-1.5 text-sm font-semibold text-white shadow hover:bg-red-700"
+                    >
+                      Stop
+                    </button>
+                  ) : navigationActive ? (
+                    // Show Start button when route is previewed but turn-by-turn not active
+                    onStartTurnByTurn && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onStartTurnByTurn(start, dest);
+                        }}
+                        className="rounded-full bg-green-600 px-4 py-1.5 text-sm font-semibold text-white shadow hover:bg-green-700"
+                      >
+                        Start
+                      </button>
+                    )
+                  ) : (
+                    // No route yet, don't show button
+                    null
+                  )}
+                </>
+              )}
+              <button
+                type="button"
+                aria-expanded={open}
+                onClick={() => setOpen((v) => !v)}
+                className={`size-6 shrink-0 rounded-full bg-white shadow ring-1 ring-gray-200 flex items-center justify-center transition-transform duration-300 ease-in-out ${open ? 'rotate-180' : ''}`}
+              >
+                <ChevronUp className="h-4 w-4 text-gray-700" />
+              </button>
             </div>
           </div>
-        </button>
+        </div>
 
         {/* Animated body */}
         <div
@@ -235,15 +281,6 @@ export default function NavigationPanel({ businesses, userLocation, defaultDesti
               <Navigation className="h-5 w-5" />
               Start journey
             </button>
-            {onStartTurnByTurn && (
-              <button
-                disabled={!start || !dest}
-                onClick={() => start && dest && onStartTurnByTurn(start, dest)}
-                className="px-5 py-3 rounded-2xl bg-green-600 text-white font-semibold shadow hover:bg-green-700 disabled:opacity-50"
-              >
-                Start
-              </button>
-            )}
             {(startId || destId) && onClearNavigation && (
               <button
                 onClick={onClearNavigation}

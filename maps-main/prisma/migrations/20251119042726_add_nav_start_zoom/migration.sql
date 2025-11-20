@@ -1,0 +1,13 @@
+-- CreateTable
+CREATE TABLE "map_settings" (
+    "id" INTEGER NOT NULL DEFAULT 1,
+    "initial_zoom" DOUBLE PRECISION NOT NULL DEFAULT 2.5,
+    "place_zoom" DOUBLE PRECISION NOT NULL DEFAULT 2.8,
+    "dest_zoom" DOUBLE PRECISION NOT NULL DEFAULT 2.8,
+    "nav_zoom" DOUBLE PRECISION NOT NULL DEFAULT 3.0,
+    "nav_start_zoom" DOUBLE PRECISION NOT NULL DEFAULT 3.5,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "map_settings_pkey" PRIMARY KEY ("id")
+);

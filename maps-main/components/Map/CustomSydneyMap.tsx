@@ -35,11 +35,13 @@ interface Props {
   showGraphOverlay?: boolean;
   debugTransformLogTick?: number;
   zoomConfig?: import('@/types').ZoomConfig; // Optional for backwards compatibility
+  mapRotation?: number; // Rotation angle in degrees (0 = north-up, heading = heading-up)
+  turnByTurnActive?: boolean; // Whether turn-by-turn navigation is active
 }
 
 const FALLBACK_VIEWBOX = `${VIEWBOX.minX} ${VIEWBOX.minY} ${VIEWBOX.width} ${VIEWBOX.height}`;
 
-export default function CustomSydneyMap({ businesses, selectedBusiness, userLocation, onBusinessClick, activeRoute, onCenterOnUser, onCenterOnPoint, smoothNavMarker, navigationStart, navigationDestination, showGraphOverlay = false, debugTransformLogTick, zoomConfig }: Props) {
+export default function CustomSydneyMap({ businesses, selectedBusiness, userLocation, onBusinessClick, activeRoute, onCenterOnUser, onCenterOnPoint, smoothNavMarker, navigationStart, navigationDestination, showGraphOverlay = false, debugTransformLogTick, zoomConfig, mapRotation = 0, turnByTurnActive: turnByTurnActiveProp = false }: Props) {
   const wrapperRef = useRef<HTMLDivElement | null>(null);
   const transformRef = useRef<ReactZoomPanPinchRef | null>(null);
   const [svgLoaded, setSvgLoaded] = useState<boolean>(false);
@@ -104,7 +106,7 @@ export default function CustomSydneyMap({ businesses, selectedBusiness, userLoca
     transform: ReactZoomPanPinchRef,
     lat: number,
     lng: number,
-    opts?: { targetScale?: number; durationMs?: number; scale?: number }  // Added 'scale' as alias for 'targetScale'
+    opts?: { targetScale?: number; durationMs?: number; scale?: number; rotation?: number }  // Added rotation parameter
   ) => {
     const wrapper = transform.instance?.wrapperComponent as HTMLElement | undefined;
     if (!wrapper) return;
@@ -135,6 +137,7 @@ export default function CustomSydneyMap({ businesses, selectedBusiness, userLoca
     // Support both 'scale' and 'targetScale' for backwards compatibility
     const scale = opts?.scale ?? (typeof opts?.targetScale === 'number' ? opts.targetScale : currentScale);
     const duration = opts?.durationMs ?? 400; // Default to 400ms animation
+    const rotation = opts?.rotation ?? 0; // Default to no rotation
 
     // Calculate transform to center the point.
     // react-zoom-pan-pinch outputs CSS transforms as translate(...) scale(...), meaning scale runs first.
@@ -154,10 +157,12 @@ export default function CustomSydneyMap({ businesses, selectedBusiness, userLoca
         renderedX,
         renderedY,
         duration,
+        rotation,
       });
     }
 
-    transform.setTransform(x, y, scale, duration, 'easeOut');
+    // Use setTransform with rotation parameter
+    (transform as any).setTransform(x, y, scale, duration, 'easeOut', rotation);
     lastScaleRef.current = scale;  // Update last scale
   }, [projectLatLng, viewBox]);
 
@@ -343,6 +348,29 @@ export default function CustomSydneyMap({ businesses, selectedBusiness, userLoca
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [onCenterOnUser, mapLoaded, zoomConfig]);
 
+  // 4) Update map rotation continuously during turn-by-turn navigation
+  useEffect(() => {
+    if (!mapLoaded || !transformRef.current) return;
+    if (!turnByTurnActiveProp) return; // Only rotate during turn-by-turn
+
+    const transform = transformRef.current;
+    const wrapper = transform.instance?.wrapperComponent as HTMLElement | undefined;
+    if (!wrapper) return;
+
+    const state = (transform as ReactZoomPanPinchRef & { state?: TransformState })?.state;
+    if (!state) return;
+
+    // Apply rotation smoothly without disrupting current position/scale
+    const currentScale = state.scale ?? lastScaleRef.current ?? 1;
+    const currentX = state.positionX ?? 0;
+    const currentY = state.positionY ?? 0;
+
+    // Use smooth animation for rotation updates (200ms feels natural for heading changes)
+    (transform as any).setTransform(currentX, currentY, currentScale, 200, 'easeOut', mapRotation);
+
+    console.log('🧭 Map rotation updated:', mapRotation);
+  }, [mapRotation, turnByTurnActiveProp, mapLoaded]);
+
   return (
     <div ref={wrapperRef} className="w-full h-full overflow-hidden bg-neutral-100">
       <TransformWrapper
@@ -417,8 +445,6 @@ export default function CustomSydneyMap({ businesses, selectedBusiness, userLoca
               } : undefined}
               followMe={followMe}
               onToggleFollowMe={() => setFollowMe((f) => !f)}
-              onStartTurnByTurn={() => setTurnByTurnActive(true)}
-              turnByTurnActive={turnByTurnActive}
             />
             <TransformComponent wrapperClass="!w-full !h-full" contentClass="!w-full !h-full">
               <SvgDebugWrapper
@@ -532,12 +558,12 @@ export default function CustomSydneyMap({ businesses, selectedBusiness, userLoca
                 {/* Active route overlay - draw BEFORE arrow so arrow is on top */}
                 {activeRoute && activeRoute.length >= 2 && (
                   <g>
-                    <path d={routeToSvgPath(activeRoute, (window as Window & { __SYD_GRAPH__?: import('@/types').PathGraph }).__SYD_GRAPH__)} stroke="#3b82f6" strokeWidth={24} fill="none" strokeLinejoin="round" strokeLinecap="round" opacity="0.8" />
+                    <path d={routeToSvgPath(activeRoute, (window as Window & { __SYD_GRAPH__?: import('@/types').PathGraph }).__SYD_GRAPH__)} stroke="#3b82f6" strokeWidth={8} fill="none" strokeLinejoin="round" strokeLinecap="round" opacity="0.9" />
                   </g>
                 )}
 
-                {/* Start Point Marker (Green Pin) */}
-                {navigationStart && (() => {
+                {/* Start Point Marker (Green Pin) - Hidden when start is "my-location" */}
+                {navigationStart && navigationStart.id !== 'my-location' && (() => {
                   const startSvg = projectLatLng(navigationStart.lat, navigationStart.lng);
                   return (
                     <g

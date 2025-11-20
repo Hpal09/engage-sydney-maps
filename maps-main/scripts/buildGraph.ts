@@ -12,11 +12,12 @@ interface PathNode {
   y: number;
   lat?: number;
   lng?: number;
+  street?: string;
 }
 
 interface PathGraph {
   nodesById: Record<string, PathNode>;
-  adjacency: Record<string, Array<{ to: string; distance: number; points?: Array<{ x: number; y: number }> }>>;
+  adjacency: Record<string, Array<{ to: string; distance: number; points?: Array<{ x: number; y: number }>; street?: string }>>;
 }
 
 const SAMPLE_DISTANCE = 10; // Sample every 10 SVG units (IMPROVED: denser sampling for better path representation)
@@ -25,6 +26,12 @@ const CONNECTION_THRESHOLD = 80; // Connect nodes within 80 units across segment
 
 function distance(a: { x: number; y: number }, b: { x: number; y: number }): number {
   return Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2);
+}
+
+// Extract street name from SVG element's data-street attribute
+function extractStreetName(element: string): string | undefined {
+  const match = element.match(/data-street="([^"]+)"/i);
+  return match ? match[1] : undefined;
 }
 
 // Enhanced path parser using svg-path-parser library
@@ -136,27 +143,36 @@ async function buildGraph(): Promise<PathGraph> {
   }
 
   const roadsLayer = roadsMatch[1];
-  const pathRegex = /<path[^>]*\sd="([^"]+)"/gi;
-  const lineRegex = /<line[^>]*\sx1="([^"]+)"\s*y1="([^"]+)"\s*x2="([^"]+)"\s*y2="([^"]+)"/gi;
-  const polylineRegex = /<polyline[^>]*\spoints="([^"]+)"/gi;
-  const polygonRegex = /<polygon[^>]*\spoints="([^"]+)"/gi;
+  const pathRegex = /<path[^>]*\sd="([^"]+)"[^>]*>/gi;
+  const lineRegex = /<line[^>]*\sx1="([^"]+)"\s*y1="([^"]+)"\s*x2="([^"]+)"\s*y2="([^"]+)"[^>]*>/gi;
+  const polylineRegex = /<polyline[^>]*\spoints="([^"]+)"[^>]*>/gi;
+  const polygonRegex = /<polygon[^>]*\spoints="([^"]+)"[^>]*>/gi;
 
   const allNodes: Array<{ x: number; y: number }> = [];
   const pathSegments: Array<Array<{ x: number; y: number }>> = [];
+  const pathStreetNames: Array<string | undefined> = []; // Track street name for each segment
 
   console.log('Sampling paths...');
   let match;
   let pathCount = 0;
   while ((match = pathRegex.exec(roadsLayer)) !== null) {
     pathCount++;
-    const d = match[1];
+    const fullElement = match[0]; // Full <path ...> element
+    const d = match[1]; // Just the d attribute value
+    const streetName = extractStreetName(fullElement);
+
     const points = parsePath(d);
     const sampled = samplePath(points);
     if (sampled.length > 0) {
       pathSegments.push(sampled);
+      pathStreetNames.push(streetName);
       allNodes.push(...sampled);
+
+      if (streetName && pathCount <= 5) {
+        console.log(`  Path #${pathCount}: street="${streetName}"`);
+      }
     }
-    
+
     if (pathCount % 100 === 0) {
       console.log(`  Processed ${pathCount} paths...`);
     }
@@ -167,12 +183,15 @@ async function buildGraph(): Promise<PathGraph> {
   let lineCount = 0;
   while ((match = lineRegex.exec(roadsLayer)) !== null) {
     lineCount++;
+    const fullElement = match[0];
+    const streetName = extractStreetName(fullElement);
     const x1 = parseFloat(match[1]);
     const y1 = parseFloat(match[2]);
     const x2 = parseFloat(match[3]);
     const y2 = parseFloat(match[4]);
     const lineSegment = [{ x: x1, y: y1 }, { x: x2, y: y2 }];
     pathSegments.push(lineSegment);
+    pathStreetNames.push(streetName);
     allNodes.push(...lineSegment);
   }
   console.log(`✓ Processed ${lineCount} line elements`);
@@ -181,6 +200,8 @@ async function buildGraph(): Promise<PathGraph> {
   let polylineCount = 0;
   while ((match = polylineRegex.exec(roadsLayer)) !== null) {
     polylineCount++;
+    const fullElement = match[0];
+    const streetName = extractStreetName(fullElement);
     const pointsStr = match[1].trim().split(/[\s,]+/);
     const polySegment: Array<{ x: number; y: number }> = [];
     for (let i = 0; i < pointsStr.length; i += 2) {
@@ -194,6 +215,7 @@ async function buildGraph(): Promise<PathGraph> {
     }
     if (polySegment.length > 0) {
       pathSegments.push(polySegment);
+      pathStreetNames.push(streetName);
     }
   }
   console.log(`✓ Processed ${polylineCount} polyline elements`);
@@ -273,46 +295,51 @@ async function buildGraph(): Promise<PathGraph> {
     const key = `${n.x.toFixed(2)},${n.y.toFixed(2)}`;
     nodeByCoord.set(key, n);
   });
-  
-  for (const segment of pathSegments) {
+
+  for (let segIdx = 0; segIdx < pathSegments.length; segIdx++) {
+    const segment = pathSegments[segIdx];
+    const streetName = pathStreetNames[segIdx]; // Get street name for this segment
+
     for (let i = 0; i < segment.length - 1; i++) {
       const pointA = segment[i];
       const pointB = segment[i + 1];
-      
+
       const keyA = `${pointA.x.toFixed(2)},${pointA.y.toFixed(2)}`;
       const keyB = `${pointB.x.toFixed(2)},${pointB.y.toFixed(2)}`;
-      
+
       // Map to deduped nodes
       const mappedA = nodeMapping.get(keyA);
       const mappedB = nodeMapping.get(keyB);
-      
+
       if (!mappedA || !mappedB) continue;
-      
+
       const mappedKeyA = `${mappedA.x.toFixed(2)},${mappedA.y.toFixed(2)}`;
       const mappedKeyB = `${mappedB.x.toFixed(2)},${mappedB.y.toFixed(2)}`;
-      
+
       const nodeA = nodeByCoord.get(mappedKeyA);
       const nodeB = nodeByCoord.get(mappedKeyB);
-      
+
       if (nodeA && nodeB && nodeA.id !== nodeB.id) {
         const dist = distance(nodeA, nodeB);
         if (!adjacency[nodeA.id].some(e => e.to === nodeB.id)) {
           // Store ALL points in the segment between these two nodes
           // This includes the endpoints and any intermediate points
-          const segmentPoints = segment.slice(i, i + 2); // This was the bug, it should be the actual segment points
-          
-          const edgeAtoB = { 
-            to: nodeB.id, 
+          const segmentPoints = segment.slice(i, i + 2);
+
+          const edgeAtoB = {
+            to: nodeB.id,
             distance: dist,
-            points: segmentPoints.length >= 2 ? segmentPoints : undefined
+            points: segmentPoints.length >= 2 ? segmentPoints : undefined,
+            street: streetName // Add street name to edge
           };
-          
-          const edgeBtoA = { 
-            to: nodeA.id, 
+
+          const edgeBtoA = {
+            to: nodeA.id,
             distance: dist,
-            points: segmentPoints.length >= 2 ? [...segmentPoints].reverse() : undefined
+            points: segmentPoints.length >= 2 ? [...segmentPoints].reverse() : undefined,
+            street: streetName // Add street name to edge
           };
-          
+
           adjacency[nodeA.id].push(edgeAtoB);
           adjacency[nodeB.id].push(edgeBtoA);
         }

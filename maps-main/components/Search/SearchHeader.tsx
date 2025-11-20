@@ -15,6 +15,7 @@ interface Props {
   onTabChange: (tab: TabType) => void;
   onOpenAI: () => void;
   suggestions?: Array<{ id: string; name: string; category: string }>;
+  onSelectPlace?: (placeId: string) => void;
 }
 
 const CATEGORIES = ['All categories', ...PLACE_CATEGORIES];
@@ -36,6 +37,7 @@ export default function SearchHeader({
   onTabChange,
   onOpenAI,
   suggestions = [],
+  onSelectPlace,
 }: Props) {
   const [isOpen, setIsOpen] = useState(false);
   const [filteredSuggestions, setFilteredSuggestions] = useState(suggestions);
@@ -87,9 +89,10 @@ export default function SearchHeader({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handleSelectSuggestion = (name: string) => {
+  const handleSelectSuggestion = (name: string, placeId: string) => {
     onKeywordChange(name);
     setIsOpen(false);
+    onSelectPlace?.(placeId);
   };
 
   const handleClear = () => {
@@ -121,7 +124,7 @@ export default function SearchHeader({
       case 'Enter':
         e.preventDefault();
         if (filteredSuggestions[highlightedIndex]) {
-          handleSelectSuggestion(filteredSuggestions[highlightedIndex].name);
+          handleSelectSuggestion(filteredSuggestions[highlightedIndex].name, filteredSuggestions[highlightedIndex].id);
         }
         break;
       case 'Escape':
@@ -173,7 +176,7 @@ export default function SearchHeader({
                   <li key={suggestion.id}>
                     <button
                       type="button"
-                      onClick={() => handleSelectSuggestion(suggestion.name)}
+                      onClick={() => handleSelectSuggestion(suggestion.name, suggestion.id)}
                       onMouseEnter={() => setHighlightedIndex(index)}
                       className={`w-full px-4 py-2.5 text-left transition-colors ${
                         index === highlightedIndex

@@ -10,6 +10,7 @@ export default function MapSettingsPage() {
     placeStart: 2.8,
     destination: 2.8,
     navigation: 3.0,
+    navigationStart: 3.5,
   });
 
   const [loading, setLoading] = useState(true);
@@ -81,6 +82,7 @@ export default function MapSettingsPage() {
       placeStart: 2.8,
       destination: 2.8,
       navigation: 3.0,
+      navigationStart: 3.5,
     });
     setMessage(null);
   }
@@ -275,6 +277,43 @@ export default function MapSettingsPage() {
                   value={config.navigation}
                   onChange={(e) =>
                     setConfig({ ...config, navigation: parseFloat(e.target.value) || 1 })
+                  }
+                  className="w-20 px-3 py-2 border border-gray-300 rounded-lg text-center font-semibold"
+                />
+                <span className="text-sm text-gray-600 font-medium w-6">x</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Turn-by-Turn Start Zoom */}
+          <div className="pt-6 border-t">
+            <label className="block text-sm font-semibold text-gray-900 mb-3">
+              Turn-by-Turn Start Zoom (Navigation Begins)
+            </label>
+            <p className="text-sm text-gray-600 mb-4">
+              Zoom level when turn-by-turn navigation starts with map rotation. Default: 3.5x
+            </p>
+            <div className="flex items-center gap-6">
+              <input
+                type="range"
+                min="1"
+                max="8"
+                step="0.1"
+                value={config.navigationStart}
+                onChange={(e) =>
+                  setConfig({ ...config, navigationStart: parseFloat(e.target.value) })
+                }
+                className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+              />
+              <div className="flex items-center gap-3">
+                <input
+                  type="number"
+                  min="1"
+                  max="8"
+                  step="0.1"
+                  value={config.navigationStart}
+                  onChange={(e) =>
+                    setConfig({ ...config, navigationStart: parseFloat(e.target.value) || 1 })
                   }
                   className="w-20 px-3 py-2 border border-gray-300 rounded-lg text-center font-semibold"
                 />

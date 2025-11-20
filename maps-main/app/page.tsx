@@ -347,6 +347,8 @@ export default function Page() {
 
   const [compassHeading, setCompassHeading] = useState<number | null>(null);
 
+  const [mapRotation, setMapRotation] = useState<number>(0); // Map rotation in degrees (0 = north-up, heading = heading-up)
+
   const [showGraphOverlay, setShowGraphOverlay] = useState(false);
 
   const [pathfindingDiag, setPathfindingDiag] = useState<PathfindingDiagnostics | null>(null);
@@ -469,6 +471,22 @@ export default function Page() {
     }
     handleAiSelectPlace(event.placeId);
   }, [allEvents, handleAiSelectPlace]);
+
+  // When selecting a place from the header dropdown, center map on it (with a slight zoom) and highlight it
+  const handleSearchSelectPlace = useCallback((placeId: string) => {
+    const place = allPlaces.find((p) => p.id === placeId);
+    if (!place) {
+      console.warn('Search select place not found', placeId);
+      return;
+    }
+    setSelected(place);
+    setCenterOnPoint({
+      lat: place.lat,
+      lng: place.lng,
+      tick: Date.now(),
+      targetScale: zoomConfig?.destination ?? 2.8,
+    });
+  }, [allPlaces, zoomConfig]);
 
 
 
@@ -804,7 +822,8 @@ export default function Page() {
 
         }
 
-        if (derivedHeading !== null) {
+        // TELEPORT QVB: Bypass heading smoothing when simulating
+        if (!simulateAtQvb && derivedHeading !== null) {
 
           const currentHeading = lastHeadingRef.current ?? derivedHeading;
 
@@ -856,13 +875,17 @@ export default function Page() {
 
           }
 
+        } else if (simulateAtQvb && derivedHeading !== null) {
+          // Apply heading directly without smoothing for teleport
+          shown = { ...shown, heading: derivedHeading };
+          lastHeadingRef.current = derivedHeading;
         }
 
         // GPS SMOOTHING: Apply position smoothing to reduce jitter
-
+        // TELEPORT QVB: Bypass position smoothing when simulating
         // IMPORTANT: Keep smoothing light to preserve actual position for wrong turn detection
 
-        if (lastShownRef.current) {
+        if (!simulateAtQvb && lastShownRef.current) {
 
           const speed = shown.speed ?? 0;
 
@@ -930,13 +953,29 @@ export default function Page() {
 
           setShowOutOfArea(false);
 
+          // Google Maps style: Always default start to "My location" when GPS is available
+          // This auto-sets on initial load and resets after clearing navigation
+          // User can still manually override to a different start point
+          if (!navigationStart) {
+            const myLocationBusiness: Business = {
+              id: 'my-location',
+              name: 'My location',
+              category: 'Current Position',
+              lat: shown.lat,
+              lng: shown.lng,
+            };
+            setNavigationStart(myLocationBusiness);
+            console.log('📍 Auto-set start to "My location" (Google Maps style)');
+          }
+
         }
 
         // Update instruction if active
 
         if (turnByTurnActive && activeRoute) {
 
-          const res = getNextInstruction(activeRoute, here);
+          const graph = (window as any).__SYD_GRAPH__ as import('@/types').PathGraph;
+          const res = getNextInstruction(activeRoute, here, graph);
 
           setCurrentInstruction(res.text);
 
@@ -1066,8 +1105,7 @@ export default function Page() {
 
 
 
-            // OFF-ROUTE DETECTION: Check if user is too far from the route
-
+            // OFF-ROUTE DETECTION: Only active when turn-by-turn is enabled
             // For walking, we allow some deviation but detect clear wrong turns
 
             const OFF_ROUTE_THRESHOLD = 25; // meters - if further than this, user went off route
@@ -1080,26 +1118,34 @@ export default function Page() {
 
 
 
-            if (distanceInMeters > OFF_ROUTE_THRESHOLD) {
+            // Only check off-route when turn-by-turn is active (not during preview)
+            if (turnByTurnActive) {
+              if (distanceInMeters > OFF_ROUTE_THRESHOLD) {
 
-              if (!isOffRoute) {
+                if (!isOffRoute) {
 
-                console.warn('⚠️ USER WENT OFF ROUTE! Distance:', distanceInMeters.toFixed(1) + 'm');
+                  console.warn('⚠️ USER WENT OFF ROUTE! Distance:', distanceInMeters.toFixed(1) + 'm');
 
-                setIsOffRoute(true);
+                  setIsOffRoute(true);
+
+                }
+
+              } else {
+
+                if (isOffRoute) {
+
+                  console.log('✅ User back on route');
+
+                  setIsOffRoute(false);
+
+                }
 
               }
-
             } else {
-
+              // Clear off-route state when not in turn-by-turn mode
               if (isOffRoute) {
-
-                console.log('✅ User back on route');
-
                 setIsOffRoute(false);
-
               }
-
             }
 
 
@@ -1210,25 +1256,34 @@ export default function Page() {
 
     const animate = () => {
 
-      if (!navMarkerRef.current) return;
+      // Capture the current target to avoid race conditions
 
-      
+      const target = navMarkerRef.current;
+
+      if (!target) {
+        // Navigation was cleared, stop animation
+        return;
+      }
+
+
 
       setSmoothNavMarker(prev => {
 
         if (!prev) {
 
-          console.log('🎬 First frame, initializing smoothNavMarker:', navMarkerRef.current);
+          console.log('🎬 First frame, initializing smoothNavMarker:', target);
 
-          return navMarkerRef.current;
+          return target;
 
         }
 
-        
 
-        const target = navMarkerRef.current!;
 
-        
+        // Double-check target is still valid
+
+        if (!target) return prev;
+
+
 
         // Smooth position interpolation
 
@@ -1238,7 +1293,7 @@ export default function Page() {
 
         const newY = prev.y + (target.y - prev.y) * smoothFactor;
 
-        
+
 
         // Smooth angle interpolation with wrapping
 
@@ -1252,13 +1307,13 @@ export default function Page() {
 
         const newAngle = prev.angleDeg + angleDiff * smoothFactor;
 
-        
+
 
         return { x: newX, y: newY, angleDeg: newAngle };
 
       });
 
-      
+
 
       animationFrame = requestAnimationFrame(animate);
 
@@ -1444,7 +1499,8 @@ export default function Page() {
 
     const here = userLocation ? { lat: userLocation.lat, lng: userLocation.lng } : undefined;
 
-    const msg = getNextInstruction(activeRoute, here).text;
+    const graph = (window as any).__SYD_GRAPH__ as import('@/types').PathGraph;
+    const msg = getNextInstruction(activeRoute, here, graph).text;
 
     setCurrentInstruction(msg);
 
@@ -1530,6 +1586,16 @@ export default function Page() {
 
     setShowNavigationError(false);
 
+    // Reset map rotation to north-up
+    setMapRotation(0);
+    console.log('🧭 Map rotation reset to north-up (0°)');
+
+    // Recenter on current location if available
+    if (userLocation) {
+      setCenterOnUserTick((t) => t + 1);
+      console.log('📍 Recentered on user location after clearing navigation');
+    }
+
   };
 
 
@@ -1537,6 +1603,15 @@ export default function Page() {
   // Combine GPS heading with compass heading (compass as fallback)
 
   const effectiveHeading = userLocation?.heading ?? compassHeading ?? 0;
+
+  // Update map rotation continuously during turn-by-turn navigation
+  useEffect(() => {
+    if (turnByTurnActive && effectiveHeading !== null) {
+      // Rotate map so heading points upward (Google Maps style)
+      setMapRotation(effectiveHeading);
+      console.log('🧭 Updating map rotation to heading:', effectiveHeading);
+    }
+  }, [effectiveHeading, turnByTurnActive]);
 
 
 
@@ -1552,9 +1627,15 @@ export default function Page() {
 
    * Accepts Waypoint type (id, label, lat, lng) which is a subset of Business.
 
+   * Options: { startTurnByTurn?: boolean } - defaults to preview-only mode
+
    */
 
-  const startNavigation = async (start: { lat: number; lng: number }, destination: { lat: number; lng: number }) => {
+  const startNavigation = async (
+    start: { lat: number; lng: number },
+    destination: { lat: number; lng: number },
+    options?: { startTurnByTurn?: boolean }
+  ) => {
 
     // Ensure graph is loaded
 
@@ -1678,13 +1759,22 @@ export default function Page() {
 
 
 
-        // Center on starting point
-
-        if (startInt.lat && startInt.lng) {
-
-          setCenterOnPoint({ lat: startInt.lat, lng: startInt.lng, tick: Date.now(), targetScale: 2.5 });
-
+        // Handle turn-by-turn activation if requested
+        if (options?.startTurnByTurn) {
+          setTurnByTurnActive(true);
+          const graph = (window as any).__SYD_GRAPH__ as import('@/types').PathGraph;
+          const msg = getNextInstruction(route, userLocation ? { lat: userLocation.lat, lng: userLocation.lng } : undefined, graph).text;
+          setCurrentInstruction(msg);
+          // Set initial map rotation to current heading (Google Maps style)
+          const heading = userLocation?.heading ?? compassHeading ?? 0;
+          setMapRotation(heading);
+          // Recenter on user to start turn-by-turn experience with configured zoom
+          if (userLocation) {
+            setCenterOnPoint({ lat: userLocation.lat, lng: userLocation.lng, tick: Date.now(), targetScale: zoomConfig?.navigationStart ?? 3.5 });
+          }
+          console.log('🎯 Turn-by-turn navigation activated with rotation:', heading);
         }
+        // Preview mode: Just draw the route, no camera movement
 
 
 
@@ -1913,8 +2003,9 @@ export default function Page() {
           navigationDestination={navigationDestination}
           showGraphOverlay={showGraphOverlay}
           debugTransformLogTick={debugTransformLogTick}
-          verticalSafeArea={MAP_VERTICAL_SAFE_AREA}
           zoomConfig={zoomConfig || undefined}
+          mapRotation={mapRotation}
+          turnByTurnActive={turnByTurnActive}
         />
       </div>
 
@@ -2102,11 +2193,11 @@ export default function Page() {
 
 
 
-        {/* Turn-by-turn banner */}
+        {/* Turn-by-turn banner - positioned above navigation card */}
 
         {turnByTurnActive && currentInstruction && !isOffRoute && (
 
-          <div className="absolute left-0 right-0 top-28 mx-auto w-full max-w-xl px-4 pointer-events-auto">
+          <div className="absolute left-0 right-0 bottom-28 mx-auto w-full max-w-xl px-4 pointer-events-auto">
 
             <div className="rounded-2xl bg-white shadow-md border px-4 py-3 text-sm font-medium flex items-center justify-between gap-3">
 
@@ -2122,60 +2213,65 @@ export default function Page() {
 
         {/* Top-centered search header */}
 
-        <div className="absolute left-0 right-0 top-4 flex justify-center px-4 pointer-events-auto">
+        <div className="absolute left-0 right-0 top-4 flex justify-center px-4 pointer-events-none">
 
-          {!aiMode ? (
+          <div className="pointer-events-auto">
 
-            <SearchHeader
+            {!aiMode ? (
 
-              keyword={keyword}
+              <SearchHeader
 
-              onKeywordChange={setKeyword}
+                keyword={keyword}
 
-              selectedCategory={selectedCategory}
+                onKeywordChange={setKeyword}
 
-              onCategoryChange={setSelectedCategory}
+                selectedCategory={selectedCategory}
 
-              selectedTab={selectedTab}
+                onCategoryChange={setSelectedCategory}
 
-              onTabChange={setSelectedTab}
+                selectedTab={selectedTab}
 
-              onOpenAI={() => {
+                onTabChange={setSelectedTab}
+
+                onOpenAI={() => {
                 setPendingQuery(keyword || undefined);
                 setAiMode(true);
               }}
 
               suggestions={allPlaces.map(p => ({ id: p.id, name: p.name, category: p.category }))}
+              onSelectPlace={handleSearchSelectPlace}
 
             />
 
-          ) : (
+            ) : (
 
-            <div className="w-full max-w-xl h-[70vh] rounded-2xl border bg-white shadow-xl overflow-hidden">
+              <div className="w-full max-w-xl h-[70vh] rounded-2xl border bg-white shadow-xl overflow-hidden">
 
-              <AISearch
+                <AISearch
 
-                initialQuery={pendingQuery}
+                  initialQuery={pendingQuery}
 
-                userLocation={userLocation}
+                  userLocation={userLocation}
 
-                onSelectPlace={handleAiSelectPlace}
+                  onSelectPlace={handleAiSelectPlace}
 
-                onSelectDeal={handleAiSelectDeal}
+                  onSelectDeal={handleAiSelectDeal}
 
-                onSelectEvent={handleAiSelectEvent}
+                  onSelectEvent={handleAiSelectEvent}
 
-                onStartNavigation={handleAiNavigation}
+                  onStartNavigation={handleAiNavigation}
 
-                onExitAI={handleExitAi}
+                  onExitAI={handleExitAi}
 
-                entryContext={aiEntryContext}
+                  entryContext={aiEntryContext}
 
-              />
+                />
 
-            </div>
+              </div>
 
-          )}
+            )}
+
+          </div>
 
         </div>
 
@@ -2203,9 +2299,14 @@ export default function Page() {
 
             onClearNavigation={clearAllNavigation}
 
+            navigationActive={navigationActive}
+
+            turnByTurnActive={turnByTurnActive}
+
             onStartJourney={(start, destination) => {
 
               // Use the canonical navigation handler
+              console.log('📍 onStartJourney called:', { start, destination });
 
               startNavigation(start, destination);
 
@@ -2213,27 +2314,10 @@ export default function Page() {
 
             onStartTurnByTurn={(start, destination) => {
 
-              // Ensure route exists, otherwise compute via onStartJourney path
+              // Start navigation with turn-by-turn enabled
+              console.log('🎯 onStartTurnByTurn called:', { start, destination });
 
-              if (!activeRoute || activeRoute.length < 2) {
-
-                console.warn('⚠️ Cannot start turn-by-turn: no active route');
-
-                return;
-
-              }
-
-              console.log('🎯 Turn-by-turn navigation activated!');
-
-              setTurnByTurnActive(true);
-
-              const msg = getNextInstruction(activeRoute, userLocation ? { lat: userLocation.lat, lng: userLocation.lng } : undefined).text;
-
-              setCurrentInstruction(msg);
-
-              // recentre on user to start experience
-
-              setCenterOnUserTick((t) => t + 1);
+              startNavigation(start, destination, { startTurnByTurn: true });
 
             }}
 

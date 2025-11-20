@@ -17,6 +17,7 @@ export async function GET() {
       placeStart: settings?.placeZoom ?? 2.8,
       destination: settings?.destZoom ?? 2.8,
       navigation: settings?.navZoom ?? 3.0,
+      navigationStart: settings?.navStartZoom ?? 3.5,
     };
 
     return NextResponse.json(config);
@@ -29,6 +30,7 @@ export async function GET() {
       placeStart: 2.8,
       destination: 2.8,
       navigation: 3.0,
+      navigationStart: 3.5,
     });
   }
 }
@@ -48,6 +50,7 @@ export async function PUT(request: Request) {
         placeZoom: body.placeStart,
         destZoom: body.destination,
         navZoom: body.navigation,
+        navStartZoom: body.navigationStart,
       },
       create: {
         id: 1,
@@ -55,6 +58,7 @@ export async function PUT(request: Request) {
         placeZoom: body.placeStart ?? 2.8,
         destZoom: body.destination ?? 2.8,
         navZoom: body.navigation ?? 3.0,
+        navStartZoom: body.navigationStart ?? 3.5,
       },
     });
 
@@ -63,6 +67,7 @@ export async function PUT(request: Request) {
       placeStart: settings.placeZoom,
       destination: settings.destZoom,
       navigation: settings.navZoom,
+      navigationStart: settings.navStartZoom,
     });
   } catch (error) {
     console.error('[API] Failed to update map settings:', error);

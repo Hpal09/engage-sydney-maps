@@ -55,6 +55,7 @@ export interface PathNode {
   y: number; // SVG coordinate
   lat?: number;
   lng?: number;
+  street?: string; // Street name for this node
 }
 
 export interface PathEdge {
@@ -62,11 +63,12 @@ export interface PathEdge {
   to: string;
   distance: number; // in SVG units
   points?: Array<{ x: number; y: number }>; // Intermediate points for curved segments
+  street?: string; // Street name for this edge
 }
 
 export interface PathGraph {
   nodesById: Record<string, PathNode>;
-  adjacency: Record<string, Array<{ to: string; distance: number; points?: Array<{ x: number; y: number }> }>>;
+  adjacency: Record<string, Array<{ to: string; distance: number; points?: Array<{ x: number; y: number }>; street?: string }>>;
 }
 
 export interface RouteSummary {
@@ -84,5 +86,6 @@ export interface ZoomConfig {
   placeStart: number;     // 2) When a place is set as starting point
   destination: number;    // 3) When destination is set / centered
   navigation: number;     // 4) When navigation starts / follow mode
+  navigationStart: number; // 5) When turn-by-turn navigation starts (with rotation)
 }
 

@@ -90,11 +90,24 @@ export function calculateETA(distanceMeters: number): string {
   return `${hours}h ${minutes}m`;
 }
 
-export function getNextInstruction(route: PathNode[], user?: GpsPoint): { text: string; reachedDestination: boolean } {
+export function getNextInstruction(route: PathNode[], user?: GpsPoint, graph?: import('@/types').PathGraph): { text: string; reachedDestination: boolean } {
   if (!route || route.length < 2) return { text: '', reachedDestination: false };
+
+  // Helper function to get street name from edge between two nodes
+  const getStreetName = (fromNode: PathNode, toNode: PathNode): string | undefined => {
+    if (!graph) return undefined;
+    const edges = graph.adjacency[fromNode.id] || [];
+    const edge = edges.find(e => e.to === toNode.id);
+    return edge?.street;
+  };
+
   if (!user) {
     const gps = nodesToGps(route);
     const dir = cardinalFromBearing(bearingDegrees(gps[0], gps[1]));
+    const street = getStreetName(route[0], route[1]);
+    if (street) {
+      return { text: `Head ${dir} on ${street}`, reachedDestination: false };
+    }
     return { text: `Head ${dir}`, reachedDestination: false };
   }
 
@@ -115,17 +128,36 @@ export function getNextInstruction(route: PathNode[], user?: GpsPoint): { text: 
   const next = gps[idx + 1];
   const distToNext = calculateDistance(user, next);
 
+  const currentStreet = getStreetName(route[idx], route[idx + 1]);
+
   if (idx + 2 < gps.length) {
+    const nextStreet = getStreetName(route[idx + 1], route[idx + 2]);
     const turn = turnDirection(gps[idx], gps[idx + 1], gps[idx + 2]);
+
     if (distToNext < 18) {
-      if (turn === 'straight') return { text: 'Continue straight', reachedDestination: false };
+      // Close to turn
+      if (turn === 'straight') {
+        if (currentStreet && nextStreet && currentStreet !== nextStreet) {
+          return { text: `Continue onto ${nextStreet}`, reachedDestination: false };
+        }
+        return { text: currentStreet ? `Continue on ${currentStreet}` : 'Continue straight', reachedDestination: false };
+      }
+      // Turn instruction
+      if (nextStreet) {
+        return { text: `Turn ${turn} onto ${nextStreet}`, reachedDestination: false };
+      }
       return { text: `Turn ${turn} ahead`, reachedDestination: false };
     }
   }
 
+  // General navigation instruction
   const dir = cardinalFromBearing(bearingDegrees(gps[idx], next));
   const meters = Math.max(5, Math.round(distToNext));
-  return { text: `Head ${dir} for ${meters} m`, reachedDestination: false };
+
+  if (currentStreet) {
+    return { text: `Head ${dir} on ${currentStreet} for ${meters}m`, reachedDestination: false };
+  }
+  return { text: `Head ${dir} for ${meters}m`, reachedDestination: false };
 }
 
 

@@ -79,14 +79,15 @@ model AdminUser {
 }
 
 model MapSettings {
-  id           Int      @id @default(1)
-  initialZoom  Float    @default(2.5)  @map("initial_zoom")
-  placeZoom    Float    @default(2.8)  @map("place_zoom")
-  destZoom     Float    @default(2.8)  @map("dest_zoom")
-  navZoom      Float    @default(3.0)  @map("nav_zoom")
+  id              Int      @id @default(1)
+  initialZoom     Float    @default(2.5)  @map("initial_zoom")
+  placeZoom       Float    @default(2.8)  @map("place_zoom")
+  destZoom        Float    @default(2.8)  @map("dest_zoom")
+  navZoom         Float    @default(3.0)  @map("nav_zoom")
+  navStartZoom    Float    @default(3.5)  @map("nav_start_zoom")
 
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt      @map("updated_at")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt      @map("updated_at")
 
   @@map("map_settings")
 }
