@@ -139,8 +139,8 @@ export default function NavigationPanel({ businesses, userLocation, defaultDesti
   }, [userLocation?.lat, userLocation?.lng]);
 
   return (
-    <div className="pointer-events-auto absolute inset-x-0 bottom-0 z-30 mx-auto w-full max-w-xl p-4">
-      <div className="rounded-3xl border bg-white/95 shadow-xl">
+    <div className="pointer-events-none absolute inset-x-0 bottom-0 z-30 mx-auto w-full max-w-xl p-4">
+      <div className="pointer-events-auto rounded-3xl border bg-white/95 shadow-xl">
         {/* Header / Handle */}
         <div className="w-full rounded-t-3xl p-3 pb-2">
           <div className="mx-auto mb-2 h-1.5 w-10 rounded-full bg-gray-300" />

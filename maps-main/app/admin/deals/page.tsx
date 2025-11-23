@@ -6,7 +6,7 @@ import DealsTable from "./DealsTable";
 export default async function DealsPage() {
   const deals = await prisma.deal.findMany({
     include: {
-      place: {
+      Place: {
         select: {
           name: true,
         },

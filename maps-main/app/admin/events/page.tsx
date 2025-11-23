@@ -5,7 +5,7 @@ import EventsTable from "./EventsTable";
 export default async function EventsPage() {
   const events = await prisma.event.findMany({
     include: {
-      place: {
+      Place: {
         select: {
           name: true,
         },

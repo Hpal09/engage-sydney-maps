@@ -8,72 +8,74 @@ datasource db {
 }
 
 model AdminUser {
-  id            String   @id
-  email         String   @unique
-  password_hash String
-  role          String   @default("admin")
-  created_at    DateTime @default(now())
-  updated_at    DateTime
+  id           String   @id
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  role         String   @default("admin")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @map("updated_at")
 }
 
 model Deal {
   id          String   @id
-  place_id    String
+  placeId     String   @map("place_id")
   title       String
   description String?
-  starts_at   DateTime
-  ends_at     DateTime
-  is_live     Boolean  @default(true)
+  startsAt    DateTime @map("starts_at")
+  endsAt      DateTime @map("ends_at")
+  isLive      Boolean  @default(true) @map("is_live")
   tags        String[]
-  created_at  DateTime @default(now())
-  updated_at  DateTime
-  Place       Place    @relation(fields: [place_id], references: [id])
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @map("updated_at")
+  Place       Place    @relation(fields: [placeId], references: [id])
 }
 
 model Event {
   id          String   @id
-  place_id    String?
+  placeId     String?  @map("place_id")
   title       String
   description String?
-  starts_at   DateTime
-  ends_at     DateTime
-  is_live     Boolean  @default(true)
+  startsAt    DateTime @map("starts_at")
+  endsAt      DateTime @map("ends_at")
+  isLive      Boolean  @default(true) @map("is_live")
   category    String
   tags        String[]
-  created_at  DateTime @default(now())
-  updated_at  DateTime
-  Place       Place?   @relation(fields: [place_id], references: [id])
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @map("updated_at")
+  Place       Place?   @relation(fields: [placeId], references: [id])
 }
 
 model Place {
-  id                String   @id
-  name              String
-  short_description String?
-  full_description  String?
-  category          String
-  tags              String[]
-  lat               Float
-  lng               Float
-  address           String?
-  website_url       String?
-  phone             String?
-  opening_hours     String?
-  price_range       String?
-  rating            Float?
-  is_live           Boolean  @default(true)
-  created_at        DateTime @default(now())
-  updated_at        DateTime
-  Deal              Deal[]
-  Event             Event[]
+  id               String   @id
+  name             String
+  shortDescription String?  @map("short_description")
+  fullDescription  String?  @map("full_description")
+  category         String
+  tags             String[]
+  lat              Float
+  lng              Float
+  address          String?
+  websiteUrl       String?  @map("website_url")
+  phone            String?
+  openingHours     String?  @map("opening_hours")
+  priceRange       String?  @map("price_range")
+  rating           Float?
+  isLive           Boolean  @default(true) @map("is_live")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @map("updated_at")
+  Deal             Deal[]
+  Event            Event[]
 }
 
-model map_settings {
-  id             Int      @id @default(1)
-  initial_zoom   Float    @default(2.5)
-  place_zoom     Float    @default(2.8)
-  dest_zoom      Float    @default(2.8)
-  nav_zoom       Float    @default(3.0)
-  nav_start_zoom Float    @default(3.5)
-  created_at     DateTime @default(now())
-  updated_at     DateTime
+model MapSettings {
+  id            Int      @id @default(1)
+  initialZoom   Float    @default(2.5) @map("initial_zoom")
+  placeZoom     Float    @default(2.8) @map("place_zoom")
+  destZoom      Float    @default(2.8) @map("dest_zoom")
+  navZoom       Float    @default(3.0) @map("nav_zoom")
+  navStartZoom  Float    @default(3.5) @map("nav_start_zoom")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@map("map_settings")
 }

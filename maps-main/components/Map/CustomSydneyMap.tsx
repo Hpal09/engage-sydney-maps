@@ -59,7 +59,7 @@ export default function CustomSydneyMap({ businesses, selectedBusiness, userLoca
   const lastScaleRef = useRef<number>(1);
   const logTransformsUntilRef = useRef<number>(0);
   const ACTIVITY_LOG_WINDOW_MS = 5000;
-  const isDev = process.env.NODE_ENV === 'development';
+  const isDev = false; // Hidden for demo - was: process.env.NODE_ENV === 'development'
 
   useEffect(() => {
     if (!isDev) return;
@@ -233,131 +233,7 @@ export default function CustomSydneyMap({ businesses, selectedBusiness, userLoca
     });
   }, [businesses, projectLatLng, validateBusinessCoords]);
 
-  // Attach click handlers to clickable SVG POI elements after content loads
-  useEffect(() => {
-    if (!svgContentRef.current || !svgContent || businesses.length === 0) return;
-
-    console.log('🎯 Attaching click handlers to SVG POI elements...');
-
-    const svgRoot = svgContentRef.current;
-    let attachedCount = 0;
-
-    // Helper function to convert "Darling Square Cafe" → "darling-square-cafe"
-    const normalizeToHyphens = (name: string): string => {
-      return name
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, '-') // Replace non-alphanumeric with hyphens
-        .replace(/^-+|-+$/g, '');      // Remove leading/trailing hyphens
-    };
-
-    // Helper function to convert "Darling Square Cafe" → "Darling_Square_Cafe" (Title Case with underscores)
-    const normalizeToUnderscores = (name: string): string => {
-      return name
-        .split(/\s+/) // Split on whitespace
-        .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()) // Title case each word
-        .join('_'); // Join with underscores
-    };
-
-    // Helper function to convert special characters to SVG hex encoding
-    // e.g., "Emperor's Garden" → "Emperor_x27_s_Garden" (apostrophe = x27 in hex)
-    const normalizeToSvgEncoded = (name: string): string => {
-      return name
-        .split(/\s+/)
-        .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-        .join('_')
-        .replace(/'/g, '_x27_')  // Apostrophe
-        .replace(/"/g, '_x22_')  // Double quote
-        .replace(/&/g, '_x26_'); // Ampersand
-    };
-
-    // Iterate through all businesses and find matching SVG elements
-    businesses.forEach((business) => {
-      // Try multiple matching strategies:
-      // 1. Try exact database ID match
-      let element = svgRoot.querySelector(`#${CSS.escape(business.id)}`);
-      let matchedBy = '';
-
-      // 2. Try Title Case with underscores (e.g., "Darling_Square_Cafe") - MOST COMMON for renamed layers
-      if (!element) {
-        const titleCaseUnderscore = normalizeToUnderscores(business.name);
-        element = svgRoot.querySelector(`#${CSS.escape(titleCaseUnderscore)}`);
-        if (element) matchedBy = `title_underscore: ${titleCaseUnderscore}`;
-      }
-
-      // 3. Try SVG-encoded special characters (e.g., "Emperor_x27_s_Garden" for "Emperor's Garden")
-      if (!element) {
-        const svgEncoded = normalizeToSvgEncoded(business.name);
-        element = svgRoot.querySelector(`#${CSS.escape(svgEncoded)}`);
-        if (element) matchedBy = `svg_encoded: ${svgEncoded}`;
-      }
-
-      // 4. Try lowercase with hyphens (e.g., "darling-square-cafe")
-      if (!element) {
-        const hyphenated = normalizeToHyphens(business.name);
-        element = svgRoot.querySelector(`#${CSS.escape(hyphenated)}`);
-        if (element) matchedBy = `hyphens: ${hyphenated}`;
-      }
-
-      // 5. Try exact business name as-is
-      if (!element && business.name) {
-        try {
-          element = svgRoot.querySelector(`#${CSS.escape(business.name)}`);
-          if (element) matchedBy = `exact: ${business.name}`;
-        } catch (e) {
-          // Ignore selector errors
-        }
-      }
-
-      if (element) {
-        // Add clickable class for styling
-        element.classList.add('poi-clickable');
-
-        // Store business reference for cleanup
-        (element as any).__business = business;
-
-        // Add click handler
-        const handleClick = (e: Event) => {
-          e.stopPropagation();
-          e.preventDefault();
-          console.log(`🖱️ Clicked POI: ${business.name}`);
-          onBusinessClick?.(business);
-        };
-
-        element.addEventListener('click', handleClick);
-
-        // Handle selection state
-        if (business.id === selectedBusiness?.id) {
-          element.classList.add('poi-selected');
-        } else {
-          element.classList.remove('poi-selected');
-        }
-
-        attachedCount++;
-        console.log(`✅ Matched: "${business.name}" → SVG ID: "${element.id}" (${matchedBy || 'database_id'})`);
-      } else {
-        const tried = [
-          business.id,
-          normalizeToUnderscores(business.name),
-          normalizeToSvgEncoded(business.name),
-          normalizeToHyphens(business.name),
-          business.name
-        ].join('", "');
-        console.warn(`⚠️ No SVG element found for: "${business.name}" (tried: "${tried}")`);
-      }
-    });
-
-    console.log(`✅ Attached ${attachedCount} of ${businesses.length} clickable POIs`);
-
-    // Cleanup function to remove event listeners
-    return () => {
-      const allClickable = svgRoot.querySelectorAll('.poi-clickable');
-      allClickable.forEach((element) => {
-        element.classList.remove('poi-clickable', 'poi-selected');
-        const clone = element.cloneNode(true);
-        element.parentNode?.replaceChild(clone, element);
-      });
-    };
-  }, [svgContent, businesses, selectedBusiness, onBusinessClick]);
+  // Removed complex SVG DOM manipulation - using simple POI markers instead for performance
 
   const controlPointTransform = useMemo(() => getMapTransform(), []);
 
@@ -684,8 +560,8 @@ export default function CustomSydneyMap({ businesses, selectedBusiness, userLoca
                   );
                 })()}
 
-                {/* Business markers - DISABLED: Now using clickable SVG layers instead */}
-                {/* <g>
+                {/* Business markers - Simple transparent dots for performance */}
+                <g>
                   {markers.map((m) => (
                     <g
                       key={m.id}
@@ -693,13 +569,27 @@ export default function CustomSydneyMap({ businesses, selectedBusiness, userLoca
                       className="cursor-pointer"
                       style={{ pointerEvents: 'auto' }}
                     >
-                      <circle cx={m.svg.x} cy={m.svg.y} r={14} fill={m.id === selectedBusiness?.id ? '#dc2626' : '#ef4444'} stroke="#fff" strokeWidth={4} />
-                      <text x={m.svg.x} y={m.svg.y + 3} textAnchor="middle" fontSize={18} fontWeight={700} fill="#fff">
-                        {m.idx}
-                      </text>
+                      {/* Outer glow */}
+                      <circle
+                        cx={m.svg.x}
+                        cy={m.svg.y}
+                        r={12}
+                        fill={m.id === selectedBusiness?.id ? '#ef4444' : '#3b82f6'}
+                        opacity="0.3"
+                      />
+                      {/* Main dot */}
+                      <circle
+                        cx={m.svg.x}
+                        cy={m.svg.y}
+                        r={6}
+                        fill={m.id === selectedBusiness?.id ? '#ef4444' : '#3b82f6'}
+                        stroke="#fff"
+                        strokeWidth={2}
+                        opacity="0.9"
+                      />
                     </g>
                   ))}
-                </g> */}
+                </g>
 
                 {/* Active route overlay - draw BEFORE arrow so arrow is on top */}
                 {activeRoute && activeRoute.length >= 2 && (

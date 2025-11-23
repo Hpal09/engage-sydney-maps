@@ -6,7 +6,7 @@ import { Edit, Search } from "lucide-react";
 import { Event, Place } from "@prisma/client";
 
 type EventWithPlace = Event & {
-  place: Pick<Place, "name"> | null;
+  Place: Pick<Place, "name"> | null;
 };
 
 export default function EventsTable({ events }: { events: EventWithPlace[] }) {
@@ -16,7 +16,7 @@ export default function EventsTable({ events }: { events: EventWithPlace[] }) {
     const titleMatch = event.title
       .toLowerCase()
       .includes(searchQuery.toLowerCase());
-    const placeMatch = event.place?.name
+    const placeMatch = event.Place?.name
       .toLowerCase()
       .includes(searchQuery.toLowerCase());
     const categoryMatch = event.category
@@ -103,7 +103,7 @@ export default function EventsTable({ events }: { events: EventWithPlace[] }) {
                 <tr key={event.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm font-medium text-gray-900">
-                      {event.place?.name || (
+                      {event.Place?.name || (
                         <span className="text-gray-500 italic">Area-wide</span>
                       )}
                     </div>

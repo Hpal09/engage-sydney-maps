@@ -2011,7 +2011,11 @@ export default function Page() {
 
   }, [activeRoute, smoothNavMarker, turnByTurnActive, userLocation, compassHeading, effectiveHeading]);
 
-
+  // Memoize business click handler to prevent unnecessary re-renders and event listener churn
+  const handleBusinessClick = useCallback((business: Business) => {
+    setSelected(business);
+    setShowLocationModal(true);
+  }, []);
 
   return (
 
@@ -2025,7 +2029,7 @@ export default function Page() {
           businesses={visibleBusinesses}
           selectedBusiness={selected}
           userLocation={userLocation ? { ...userLocation, heading: effectiveHeading } : undefined}
-          onBusinessClick={(b) => { setSelected(b); setShowLocationModal(true); }}
+          onBusinessClick={handleBusinessClick}
           activeRoute={remainingRoute || activeRoute}
 
           onCenterOnUser={Boolean(centerOnUserTick)}
@@ -2564,9 +2568,9 @@ export default function Page() {
 
 
 
-      {/* Debug Overlay (development only) */}
+      {/* Debug Overlay (hidden for demo) */}
 
-      <MapDebugOverlay
+      {/* <MapDebugOverlay
 
         userLocation={userLocation}
 
@@ -2592,7 +2596,7 @@ export default function Page() {
 
         pathfindingDiag={pathfindingDiag}
 
-      />
+      /> */}
 
     </>
 

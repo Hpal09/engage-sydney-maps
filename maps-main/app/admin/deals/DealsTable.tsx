@@ -6,7 +6,7 @@ import { Edit, Search } from "lucide-react";
 import { Deal, Place } from "@prisma/client";
 
 type DealWithPlace = Deal & {
-  place: Pick<Place, "name">;
+  Place: Pick<Place, "name">;
 };
 
 export default function DealsTable({ deals }: { deals: DealWithPlace[] }) {
@@ -15,7 +15,7 @@ export default function DealsTable({ deals }: { deals: DealWithPlace[] }) {
   const filteredDeals = deals.filter(
     (deal) =>
       deal.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      deal.place.name.toLowerCase().includes(searchQuery.toLowerCase())
+      deal.Place.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const formatDate = (date: Date) => {
@@ -81,7 +81,7 @@ export default function DealsTable({ deals }: { deals: DealWithPlace[] }) {
                 <tr key={deal.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm font-medium text-gray-900">
-                      {deal.place.name}
+                      {deal.Place.name}
                     </div>
                   </td>
                   <td className="px-6 py-4">
