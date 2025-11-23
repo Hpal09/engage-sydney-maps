@@ -40,4 +40,34 @@ body {
   border-radius: 9999px;
 }
 
+/* Clickable POI elements on the map */
+.poi-clickable {
+  cursor: pointer !important;
+  transition: all 0.2s ease-in-out !important;
+}
+
+/* Hover state for clickable POIs */
+.poi-clickable:hover path,
+.poi-clickable:hover polygon,
+.poi-clickable:hover rect,
+.poi-clickable:hover circle,
+.poi-clickable:hover ellipse {
+  fill: rgba(59, 130, 246, 0.3) !important;
+  stroke: #3b82f6 !important;
+  stroke-width: 3 !important;
+  filter: drop-shadow(0 0 8px rgba(59, 130, 246, 0.5));
+}
+
+/* Selected state for POIs */
+.poi-selected path,
+.poi-selected polygon,
+.poi-selected rect,
+.poi-selected circle,
+.poi-selected ellipse {
+  fill: rgba(37, 99, 235, 0.5) !important;
+  stroke: #2563eb !important;
+  stroke-width: 4 !important;
+  filter: drop-shadow(0 0 12px rgba(37, 99, 235, 0.7));
+}
+
 

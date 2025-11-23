@@ -53,6 +53,8 @@ export default function CustomSydneyMap({ businesses, selectedBusiness, userLoca
   });
   const [viewBoxStr, setViewBoxStr] = useState<string>(FALLBACK_VIEWBOX);
   const [mapLoaded, setMapLoaded] = useState(false);
+  const [svgContent, setSvgContent] = useState<string>('');
+  const svgContentRef = useRef<SVGGElement>(null);
 
   const lastScaleRef = useRef<number>(1);
   const logTransformsUntilRef = useRef<number>(0);
@@ -200,6 +202,20 @@ export default function CustomSydneyMap({ businesses, selectedBusiness, userLoca
             }
           }
         }
+
+        // Extract SVG inner content (everything between <svg> tags)
+        // Remove the outer <svg> tag since we'll inject content into our own SVG wrapper
+        const parser = new DOMParser();
+        const svgDoc = parser.parseFromString(txt, 'image/svg+xml');
+        const svgElement = svgDoc.querySelector('svg');
+        if (svgElement) {
+          // Get all child elements as HTML string
+          const innerHTML = Array.from(svgElement.children)
+            .map(child => new XMLSerializer().serializeToString(child))
+            .join('');
+          setSvgContent(innerHTML);
+        }
+
         setSvgLoaded(true);
       })
       .catch(() => setSvgLoaded(false));
@@ -216,6 +232,132 @@ export default function CustomSydneyMap({ businesses, selectedBusiness, userLoca
       };
     });
   }, [businesses, projectLatLng, validateBusinessCoords]);
+
+  // Attach click handlers to clickable SVG POI elements after content loads
+  useEffect(() => {
+    if (!svgContentRef.current || !svgContent || businesses.length === 0) return;
+
+    console.log('🎯 Attaching click handlers to SVG POI elements...');
+
+    const svgRoot = svgContentRef.current;
+    let attachedCount = 0;
+
+    // Helper function to convert "Darling Square Cafe" → "darling-square-cafe"
+    const normalizeToHyphens = (name: string): string => {
+      return name
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-') // Replace non-alphanumeric with hyphens
+        .replace(/^-+|-+$/g, '');      // Remove leading/trailing hyphens
+    };
+
+    // Helper function to convert "Darling Square Cafe" → "Darling_Square_Cafe" (Title Case with underscores)
+    const normalizeToUnderscores = (name: string): string => {
+      return name
+        .split(/\s+/) // Split on whitespace
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()) // Title case each word
+        .join('_'); // Join with underscores
+    };
+
+    // Helper function to convert special characters to SVG hex encoding
+    // e.g., "Emperor's Garden" → "Emperor_x27_s_Garden" (apostrophe = x27 in hex)
+    const normalizeToSvgEncoded = (name: string): string => {
+      return name
+        .split(/\s+/)
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+        .join('_')
+        .replace(/'/g, '_x27_')  // Apostrophe
+        .replace(/"/g, '_x22_')  // Double quote
+        .replace(/&/g, '_x26_'); // Ampersand
+    };
+
+    // Iterate through all businesses and find matching SVG elements
+    businesses.forEach((business) => {
+      // Try multiple matching strategies:
+      // 1. Try exact database ID match
+      let element = svgRoot.querySelector(`#${CSS.escape(business.id)}`);
+      let matchedBy = '';
+
+      // 2. Try Title Case with underscores (e.g., "Darling_Square_Cafe") - MOST COMMON for renamed layers
+      if (!element) {
+        const titleCaseUnderscore = normalizeToUnderscores(business.name);
+        element = svgRoot.querySelector(`#${CSS.escape(titleCaseUnderscore)}`);
+        if (element) matchedBy = `title_underscore: ${titleCaseUnderscore}`;
+      }
+
+      // 3. Try SVG-encoded special characters (e.g., "Emperor_x27_s_Garden" for "Emperor's Garden")
+      if (!element) {
+        const svgEncoded = normalizeToSvgEncoded(business.name);
+        element = svgRoot.querySelector(`#${CSS.escape(svgEncoded)}`);
+        if (element) matchedBy = `svg_encoded: ${svgEncoded}`;
+      }
+
+      // 4. Try lowercase with hyphens (e.g., "darling-square-cafe")
+      if (!element) {
+        const hyphenated = normalizeToHyphens(business.name);
+        element = svgRoot.querySelector(`#${CSS.escape(hyphenated)}`);
+        if (element) matchedBy = `hyphens: ${hyphenated}`;
+      }
+
+      // 5. Try exact business name as-is
+      if (!element && business.name) {
+        try {
+          element = svgRoot.querySelector(`#${CSS.escape(business.name)}`);
+          if (element) matchedBy = `exact: ${business.name}`;
+        } catch (e) {
+          // Ignore selector errors
+        }
+      }
+
+      if (element) {
+        // Add clickable class for styling
+        element.classList.add('poi-clickable');
+
+        // Store business reference for cleanup
+        (element as any).__business = business;
+
+        // Add click handler
+        const handleClick = (e: Event) => {
+          e.stopPropagation();
+          e.preventDefault();
+          console.log(`🖱️ Clicked POI: ${business.name}`);
+          onBusinessClick?.(business);
+        };
+
+        element.addEventListener('click', handleClick);
+
+        // Handle selection state
+        if (business.id === selectedBusiness?.id) {
+          element.classList.add('poi-selected');
+        } else {
+          element.classList.remove('poi-selected');
+        }
+
+        attachedCount++;
+        console.log(`✅ Matched: "${business.name}" → SVG ID: "${element.id}" (${matchedBy || 'database_id'})`);
+      } else {
+        const tried = [
+          business.id,
+          normalizeToUnderscores(business.name),
+          normalizeToSvgEncoded(business.name),
+          normalizeToHyphens(business.name),
+          business.name
+        ].join('", "');
+        console.warn(`⚠️ No SVG element found for: "${business.name}" (tried: "${tried}")`);
+      }
+    });
+
+    console.log(`✅ Attached ${attachedCount} of ${businesses.length} clickable POIs`);
+
+    // Cleanup function to remove event listeners
+    return () => {
+      const allClickable = svgRoot.querySelectorAll('.poi-clickable');
+      allClickable.forEach((element) => {
+        element.classList.remove('poi-clickable', 'poi-selected');
+        const clone = element.cloneNode(true);
+        element.parentNode?.replaceChild(clone, element);
+      });
+    };
+  }, [svgContent, businesses, selectedBusiness, onBusinessClick]);
 
   const controlPointTransform = useMemo(() => getMapTransform(), []);
 
@@ -455,8 +597,12 @@ export default function CustomSydneyMap({ businesses, selectedBusiness, userLoca
               >
                 {/* Base background to ensure visible area even if image fails */}
                 <rect x={viewBox.minX} y={viewBox.minY} width={viewBox.width} height={viewBox.height} fill="#f8fafc" />
-                {svgLoaded ? (
-                  <image href="/maps/20251028SydneyMap-01.svg" x={viewBox.minX} y={viewBox.minY} width={viewBox.width} height={viewBox.height} />
+                {svgLoaded && svgContent ? (
+                  <g
+                    id="inline-svg-content"
+                    ref={svgContentRef}
+                    dangerouslySetInnerHTML={{ __html: svgContent }}
+                  />
                 ) : (
                   <rect x="0" y="0" width={viewBox.width} height={viewBox.height} fill="#f3f4f6" />
                 )}
@@ -538,8 +684,8 @@ export default function CustomSydneyMap({ businesses, selectedBusiness, userLoca
                   );
                 })()}
 
-                {/* Business markers */}
-                <g>
+                {/* Business markers - DISABLED: Now using clickable SVG layers instead */}
+                {/* <g>
                   {markers.map((m) => (
                     <g
                       key={m.id}
@@ -553,7 +699,7 @@ export default function CustomSydneyMap({ businesses, selectedBusiness, userLoca
                       </text>
                     </g>
                   ))}
-                </g>
+                </g> */}
 
                 {/* Active route overlay - draw BEFORE arrow so arrow is on top */}
                 {activeRoute && activeRoute.length >= 2 && (
@@ -640,54 +786,56 @@ export default function CustomSydneyMap({ businesses, selectedBusiness, userLoca
 
                   return isInBounds ? (
                   <g pointerEvents="none">
-                    {/* Accuracy circle */}
-                    {userLocation?.accuracy && userLocation.accuracy > 0 && (
-                      <circle
-                        cx={userSvg.x}
-                        cy={userSvg.y}
-                        r={Math.max(120, userLocation.accuracy)}
-                        fill="#3b82f6"
-                        opacity={0.12}
-                      />
-                    )}
-
-                    {/* ALWAYS SHOW NAVIGATION ARROW - Google Maps style */}
+                    {/* GOOGLE MAPS NAVIGATION INDICATOR - Cone spotlight + blue dot */}
                     {/* Position snaps to route if smoothNavMarker exists, but rotation follows device heading */}
                     <g
-                      id="nav-arrow"
+                      id="nav-indicator"
                       transform={`translate(${arrowX}, ${arrowY}) rotate(${
                         typeof userLocation?.heading === 'number' ? userLocation.heading : 0
                       })`}
                       style={{
-                        transition: 'transform 0.2s ease-out',
+                        transition: 'transform 0.3s ease-out',
                         transformOrigin: 'center'
                       }}
                     >
-                      {/* Shadow for depth */}
-                      <path
-                        d="M0 -30 L 15 15 L 0 9 L -15 15 Z"
-                        fill="#000"
-                        opacity="0.2"
-                        transform="translate(1, 1)"
-                      />
+                      {/* GPS Accuracy circle - shows location uncertainty, rendered first so it's behind everything */}
+                      {userLocation?.accuracy && userLocation.accuracy > 0 && (
+                        <circle
+                          cx={0}
+                          cy={0}
+                          r={Math.max(40, userLocation.accuracy * 0.7)}
+                          fill="#4285F4"
+                          stroke="#4285F4"
+                          strokeWidth={0.8}
+                          opacity={0.15}
+                        />
+                      )}
 
-                      {/* Main arrow body - Google Maps blue */}
+                      {/* Cone/spotlight showing heading direction - semi-transparent beam */}
                       <path
-                        d="M0 -30 L 15 15 L 0 9 L -15 15 Z"
+                        d="M 0 0 L -7 -30 L 7 -30 Z"
                         fill="#4285F4"
-                        stroke="#ffffff"
-                        strokeWidth={2.5}
-                        opacity="1"
+                        opacity="0.4"
                       />
 
-                      {/* Center white dot */}
+                      {/* Outer blue circle - main location marker */}
                       <circle
                         cx={0}
                         cy={0}
-                        r={4}
+                        r={6}
+                        fill="#4285F4"
+                        stroke="#ffffff"
+                        strokeWidth={2}
+                        opacity="1"
+                      />
+
+                      {/* Inner white center dot */}
+                      <circle
+                        cx={0}
+                        cy={0}
+                        r={2.5}
                         fill="#ffffff"
-                        stroke="#4285F4"
-                        strokeWidth={1.5}
+                        opacity="1"
                       />
 
                       {/* Pulsing ring animation when on route */}
@@ -695,16 +843,16 @@ export default function CustomSydneyMap({ businesses, selectedBusiness, userLoca
                         <circle
                           cx={0}
                           cy={0}
-                          r={10}
+                          r={8}
                           fill="none"
                           stroke="#4285F4"
-                          strokeWidth={1.5}
+                          strokeWidth={1.2}
                           opacity="0.6"
                         >
                           <animate
                             attributeName="r"
-                            from="10"
-                            to="20"
+                            from="8"
+                            to="14"
                             dur="1.5s"
                             repeatCount="indefinite"
                           />

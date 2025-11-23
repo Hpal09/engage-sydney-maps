@@ -1,10 +1,12 @@
 /**
- * Build street-level navigation graph from SVG roads-walkable layer
+ * Build street-level navigation graph from SVG Paths, Doors, and Rooms layers
  * Run with: npx ts-node scripts/buildGraph.ts
  */
 
 import * as fs from 'fs';
 import * as path from 'path';
+import { parseSVGMap } from '../lib/svgParser';
+import { buildGraphFromSVG } from '../lib/graphBuilder';
 
 interface PathNode {
   id: string;
@@ -15,23 +17,44 @@ interface PathNode {
   street?: string;
 }
 
+interface PreDefinedRoute {
+  fromId: string;
+  toId: string;
+  path: Array<{ x: number; y: number }>;
+  streets: string[];
+}
+
 interface PathGraph {
   nodesById: Record<string, PathNode>;
   adjacency: Record<string, Array<{ to: string; distance: number; points?: Array<{ x: number; y: number }>; street?: string }>>;
+  predefinedRoutes?: PreDefinedRoute[];
 }
 
 const SAMPLE_DISTANCE = 10; // Sample every 10 SVG units (IMPROVED: denser sampling for better path representation)
 const DEDUP_THRESHOLD = 5; // Merge nodes within 5 units as duplicates (tight threshold to preserve detail)
-const CONNECTION_THRESHOLD = 80; // Connect nodes within 80 units across segments (more permissive to capture valid intersections)
+const CONNECTION_THRESHOLD = 35; // Connect nodes within 35 units across segments (for intersections)
+const MAX_STRAIGHT_EDGE_DISTANCE = 45; // Maximum straight-line distance to prevent shortcuts through buildings
 
 function distance(a: { x: number; y: number }, b: { x: number; y: number }): number {
   return Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2);
 }
 
-// Extract street name from SVG element's data-street attribute
+// Extract street name from SVG element
+// Priority: 1) data-street attribute, 2) id attribute
 function extractStreetName(element: string): string | undefined {
-  const match = element.match(/data-street="([^"]+)"/i);
-  return match ? match[1] : undefined;
+  // Check for data-street attribute first
+  let match = element.match(/data-street="([^"]+)"/i);
+  if (match) return match[1];
+
+  // Check for id attribute (convert underscores to spaces)
+  match = element.match(/\sid="([^"]+)"/i);
+  if (match) {
+    const id = match[1];
+    // Convert underscores to spaces and clean up
+    return id.replace(/_/g, ' ').trim();
+  }
+
+  return undefined;
 }
 
 // Enhanced path parser using svg-path-parser library
@@ -131,299 +154,183 @@ function simpleGpsConversion(x: number, y: number): { lat: number; lng: number }
   return { lat, lng };
 }
 
+// Extract street name from element or parent group
+// Priority: 1) element's data-street, 2) element's id, 3) parent group ID
+function extractStreetNameFromContext(element: string, parentGroupId?: string): string | undefined {
+  // First check element's own attributes (data-street or id)
+  const elementStreet = extractStreetName(element);
+  if (elementStreet) return elementStreet;
+
+  // Fall back to parent group ID (layer name) if exists
+  if (parentGroupId) {
+    return parentGroupId.replace(/_/g, ' ').trim();
+  }
+
+  return undefined;
+}
+
+// Extract pre-defined routes from SVG
+function extractPredefinedRoutes(svgContent: string): PreDefinedRoute[] {
+  const routes: PreDefinedRoute[] = [];
+
+  // Find the predefined-routes group
+  const routesGroupRegex = /<g\s+id="predefined-routes"[^>]*>([\s\S]*?)<\/g>/i;
+  const routesMatch = svgContent.match(routesGroupRegex);
+
+  if (!routesMatch) {
+    console.log('ℹ️  No predefined-routes layer found in SVG');
+    return routes;
+  }
+
+  const routesContent = routesMatch[1];
+
+  // Find individual route groups with data-from-id and data-to-id
+  const routeGroupRegex = /<g\s+[^>]*data-from-id="([^"]+)"[^>]*data-to-id="([^"]+)"[^>]*>([\s\S]*?)<\/g>/gi;
+  let match;
+
+  while ((match = routeGroupRegex.exec(routesContent)) !== null) {
+    const fromId = match[1];
+    const toId = match[2];
+    const routeContent = match[3];
+
+    const path: Array<{ x: number; y: number }> = [];
+    const streets: string[] = [];
+
+    // Extract all path elements within this route group
+    const pathRegex = /<path\s+[^>]*d="([^"]+)"[^>]*>/gi;
+    const polylineRegex = /<polyline\s+[^>]*points="([^"]+)"[^>]*>/gi;
+    const lineRegex = /<line\s+[^>]*x1="([^"]+)"\s+y1="([^"]+)"\s+x2="([^"]+)"\s+y2="([^"]+)"[^>]*>/gi;
+
+    let pathMatch;
+
+    // Process path elements
+    while ((pathMatch = pathRegex.exec(routeContent)) !== null) {
+      const fullElement = pathMatch[0];
+      const d = pathMatch[1];
+      const streetName = extractStreetName(fullElement);
+
+      const points = parsePath(d);
+      path.push(...points);
+
+      if (streetName && !streets.includes(streetName)) {
+        streets.push(streetName);
+      }
+    }
+
+    // Process polyline elements
+    pathRegex.lastIndex = 0;
+    while ((pathMatch = polylineRegex.exec(routeContent)) !== null) {
+      const fullElement = pathMatch[0];
+      const pointsStr = pathMatch[1];
+      const streetName = extractStreetName(fullElement);
+
+      const pointsArray = pointsStr.trim().split(/[\s,]+/);
+      for (let i = 0; i < pointsArray.length; i += 2) {
+        const x = parseFloat(pointsArray[i]);
+        const y = parseFloat(pointsArray[i + 1]);
+        if (!isNaN(x) && !isNaN(y)) {
+          path.push({ x, y });
+        }
+      }
+
+      if (streetName && !streets.includes(streetName)) {
+        streets.push(streetName);
+      }
+    }
+
+    // Process line elements
+    pathRegex.lastIndex = 0;
+    while ((pathMatch = lineRegex.exec(routeContent)) !== null) {
+      const fullElement = pathMatch[0];
+      const x1 = parseFloat(pathMatch[1]);
+      const y1 = parseFloat(pathMatch[2]);
+      const x2 = parseFloat(pathMatch[3]);
+      const y2 = parseFloat(pathMatch[4]);
+      const streetName = extractStreetName(fullElement);
+
+      path.push({ x: x1, y: y1 }, { x: x2, y: y2 });
+
+      if (streetName && !streets.includes(streetName)) {
+        streets.push(streetName);
+      }
+    }
+
+    if (path.length > 0) {
+      routes.push({ fromId, toId, path, streets });
+      console.log(`✓ Found pre-defined route: ${fromId} → ${toId} (${path.length} points, streets: ${streets.join(', ') || 'none'})`);
+    }
+  }
+
+  return routes;
+}
+
 async function buildGraph(): Promise<PathGraph> {
   console.log('Reading SVG file...');
   const svgPath = path.join(__dirname, '../public/maps/20251028SydneyMap-01.svg');
-  const svgContent = fs.readFileSync(svgPath, 'utf-8');
 
-  console.log('Extracting Roads layer...');
-  const roadsMatch = svgContent.match(/<g id="Roads">([\s\S]*?)<\/g>/);
-  if (!roadsMatch) {
-    throw new Error('Could not find Roads layer');
-  }
+  console.log('Parsing SVG (Paths, Doors, Rooms layers)...');
+  const parsedSVG = await parseSVGMap(svgPath);
 
-  const roadsLayer = roadsMatch[1];
-  const pathRegex = /<path[^>]*\sd="([^"]+)"[^>]*>/gi;
-  const lineRegex = /<line[^>]*\sx1="([^"]+)"\s*y1="([^"]+)"\s*x2="([^"]+)"\s*y2="([^"]+)"[^>]*>/gi;
-  const polylineRegex = /<polyline[^>]*\spoints="([^"]+)"[^>]*>/gi;
-  const polygonRegex = /<polygon[^>]*\spoints="([^"]+)"[^>]*>/gi;
+  console.log(`✓ Found ${parsedSVG.paths.length} path segments`);
+  console.log(`✓ Found ${parsedSVG.rooms.length} rooms`);
+  console.log(`✓ Found ${parsedSVG.doors.length} doors`);
 
-  const allNodes: Array<{ x: number; y: number }> = [];
-  const pathSegments: Array<Array<{ x: number; y: number }>> = [];
-  const pathStreetNames: Array<string | undefined> = []; // Track street name for each segment
+  // Count accessible vs non-accessible paths
+  const accessiblePaths = parsedSVG.paths.filter(p => p.accessible).length;
+  const nonAccessiblePaths = parsedSVG.paths.filter(p => !p.accessible).length;
+  console.log(`  - Accessible paths (green): ${accessiblePaths}`);
+  console.log(`  - Non-accessible paths (red): ${nonAccessiblePaths}`);
 
-  console.log('Sampling paths...');
-  let match;
-  let pathCount = 0;
-  while ((match = pathRegex.exec(roadsLayer)) !== null) {
-    pathCount++;
-    const fullElement = match[0]; // Full <path ...> element
-    const d = match[1]; // Just the d attribute value
-    const streetName = extractStreetName(fullElement);
+  console.log('\nBuilding navigation graph...');
+  const graph = buildGraphFromSVG(parsedSVG);
 
-    const points = parsePath(d);
-    const sampled = samplePath(points);
-    if (sampled.length > 0) {
-      pathSegments.push(sampled);
-      pathStreetNames.push(streetName);
-      allNodes.push(...sampled);
+  console.log(`✓ Created ${Object.keys(graph.nodesById).length} nodes`);
+  const totalEdges = Object.values(graph.adjacency).reduce((sum, edges) => sum + edges.length, 0);
+  console.log(`✓ Created ${totalEdges} edges`);
 
-      if (streetName && pathCount <= 5) {
-        console.log(`  Path #${pathCount}: street="${streetName}"`);
-      }
-    }
-
-    if (pathCount % 100 === 0) {
-      console.log(`  Processed ${pathCount} paths...`);
-    }
-  }
-  console.log(`✓ Processed ${pathCount} path elements`);
-
-  // Process line elements
-  let lineCount = 0;
-  while ((match = lineRegex.exec(roadsLayer)) !== null) {
-    lineCount++;
-    const fullElement = match[0];
-    const streetName = extractStreetName(fullElement);
-    const x1 = parseFloat(match[1]);
-    const y1 = parseFloat(match[2]);
-    const x2 = parseFloat(match[3]);
-    const y2 = parseFloat(match[4]);
-    const lineSegment = [{ x: x1, y: y1 }, { x: x2, y: y2 }];
-    pathSegments.push(lineSegment);
-    pathStreetNames.push(streetName);
-    allNodes.push(...lineSegment);
-  }
-  console.log(`✓ Processed ${lineCount} line elements`);
-
-  // Process polyline elements
-  let polylineCount = 0;
-  while ((match = polylineRegex.exec(roadsLayer)) !== null) {
-    polylineCount++;
-    const fullElement = match[0];
-    const streetName = extractStreetName(fullElement);
-    const pointsStr = match[1].trim().split(/[\s,]+/);
-    const polySegment: Array<{ x: number; y: number }> = [];
-    for (let i = 0; i < pointsStr.length; i += 2) {
-      const x = parseFloat(pointsStr[i]);
-      const y = parseFloat(pointsStr[i + 1]);
-      if (!isNaN(x) && !isNaN(y)) {
-        const pt = { x, y };
-        polySegment.push(pt);
-        allNodes.push(pt);
-      }
-    }
-    if (polySegment.length > 0) {
-      pathSegments.push(polySegment);
-      pathStreetNames.push(streetName);
-    }
-  }
-  console.log(`✓ Processed ${polylineCount} polyline elements`);
-
-  // Process polygon elements
-  let polygonCount = 0;
-  while ((match = polygonRegex.exec(roadsLayer)) !== null) {
-    polygonCount++;
-    const pointsStr = match[1].trim().split(/[\s,]+/);
-    for (let i = 0; i < pointsStr.length; i += 2) {
-      const x = parseFloat(pointsStr[i]);
-      const y = parseFloat(pointsStr[i + 1]);
-      if (!isNaN(x) && !isNaN(y)) {
-        allNodes.push({ x, y });
-      }
-    }
-  }
-  console.log(`✓ Processed ${polygonCount} polygon elements`);
-
-  console.log(`\nTotal raw nodes: ${allNodes.length}`);
-
-  // Map each original node to a unique dedup node
-  console.log('Deduplicating nodes and mapping segments...');
-  const uniqueNodes: Array<{ x: number; y: number }> = [];
-  const nodeMapping = new Map<string, { x: number; y: number }>();
-  
-  for (let i = 0; i < allNodes.length; i++) {
-    const node = allNodes[i];
-    const key = `${node.x.toFixed(2)},${node.y.toFixed(2)}`;
-    
-    let mapped = nodeMapping.get(key);
-    if (!mapped) {
-      const existing = uniqueNodes.find(n => distance(n, node) < DEDUP_THRESHOLD);
-      if (existing) {
-        mapped = existing;
-      } else {
-        mapped = node;
-        uniqueNodes.push(node);
-      }
-      nodeMapping.set(key, mapped);
-    }
-    
-    if (i % 1000 === 0 && i > 0) {
-      console.log(`  Progress: ${i}/${allNodes.length} (${uniqueNodes.length} unique so far)`);
-    }
-  }
-  console.log(`✓ Unique nodes: ${uniqueNodes.length}`);
-
-  // Create node IDs and convert to GPS
-  console.log('Converting to GPS coordinates...');
-  const nodesById: Record<string, PathNode> = {};
-  uniqueNodes.forEach((node, i) => {
-    const id = `node_${i.toString().padStart(5, '0')}`;
+  // Add GPS coordinates to nodes
+  console.log('\nAdding GPS coordinates...');
+  Object.values(graph.nodesById).forEach((node) => {
     const gps = simpleGpsConversion(node.x, node.y);
-    nodesById[id] = {
-      id,
-      x: node.x,
-      y: node.y,
-      lat: gps.lat,
-      lng: gps.lng,
-    };
+    node.lat = gps.lat;
+    node.lng = gps.lng;
   });
 
-  // Build adjacency by connecting consecutive nodes in each path segment
-  console.log('Building adjacency graph...');
-  const adjacency: Record<string, Array<{ to: string; distance: number; points?: Array<{ x: number; y: number }> }>> = {};
-  
-  // Initialize adjacency for all nodes
-  Object.keys(nodesById).forEach(id => {
-    adjacency[id] = [];
-  });
-
-  // Connect consecutive nodes within each path segment
-  const nodeList = Object.values(nodesById);
-  const nodeByCoord = new Map<string, PathNode>();
-  nodeList.forEach(n => {
-    const key = `${n.x.toFixed(2)},${n.y.toFixed(2)}`;
-    nodeByCoord.set(key, n);
-  });
-
-  for (let segIdx = 0; segIdx < pathSegments.length; segIdx++) {
-    const segment = pathSegments[segIdx];
-    const streetName = pathStreetNames[segIdx]; // Get street name for this segment
-
-    for (let i = 0; i < segment.length - 1; i++) {
-      const pointA = segment[i];
-      const pointB = segment[i + 1];
-
-      const keyA = `${pointA.x.toFixed(2)},${pointA.y.toFixed(2)}`;
-      const keyB = `${pointB.x.toFixed(2)},${pointB.y.toFixed(2)}`;
-
-      // Map to deduped nodes
-      const mappedA = nodeMapping.get(keyA);
-      const mappedB = nodeMapping.get(keyB);
-
-      if (!mappedA || !mappedB) continue;
-
-      const mappedKeyA = `${mappedA.x.toFixed(2)},${mappedA.y.toFixed(2)}`;
-      const mappedKeyB = `${mappedB.x.toFixed(2)},${mappedB.y.toFixed(2)}`;
-
-      const nodeA = nodeByCoord.get(mappedKeyA);
-      const nodeB = nodeByCoord.get(mappedKeyB);
-
-      if (nodeA && nodeB && nodeA.id !== nodeB.id) {
-        const dist = distance(nodeA, nodeB);
-        if (!adjacency[nodeA.id].some(e => e.to === nodeB.id)) {
-          // Store ALL points in the segment between these two nodes
-          // This includes the endpoints and any intermediate points
-          const segmentPoints = segment.slice(i, i + 2);
-
-          const edgeAtoB = {
-            to: nodeB.id,
-            distance: dist,
-            points: segmentPoints.length >= 2 ? segmentPoints : undefined,
-            street: streetName // Add street name to edge
-          };
-
-          const edgeBtoA = {
-            to: nodeA.id,
-            distance: dist,
-            points: segmentPoints.length >= 2 ? [...segmentPoints].reverse() : undefined,
-            street: streetName // Add street name to edge
-          };
-
-          adjacency[nodeA.id].push(edgeAtoB);
-          adjacency[nodeB.id].push(edgeBtoA);
-        }
-      }
-    }
+  // Extract pre-defined routes from SVG (if any)
+  console.log('\nExtrating pre-defined routes...');
+  const svgContent = fs.readFileSync(svgPath, 'utf-8');
+  const predefinedRoutes = extractPredefinedRoutes(svgContent);
+  if (predefinedRoutes.length > 0) {
+    graph.predefinedRoutes = predefinedRoutes;
+    console.log(`✅ Found ${predefinedRoutes.length} pre-defined routes\n`);
   }
 
-  // Connect nearby nodes that are likely at the same intersection
-  // This helps connect different path segments that meet at intersections
-  for (let i = 0; i < nodeList.length; i++) {
-    const nodeA = nodeList[i];
-    for (let j = i + 1; j < nodeList.length; j++) {
-      const nodeB = nodeList[j];
-      const dist = distance(nodeA, nodeB);
-
-      if (dist < CONNECTION_THRESHOLD && dist > 1) {
-        // Check if not already connected
-        if (!adjacency[nodeA.id].some(e => e.to === nodeB.id)) {
-          adjacency[nodeA.id].push({ to: nodeB.id, distance: dist });
-          adjacency[nodeB.id].push({ to: nodeA.id, distance: dist });
-        }
-      }
-    }
-  }
-
-  const totalEdges = Object.values(adjacency).reduce((sum, edges) => sum + edges.length, 0);
-  console.log(`✓ Total edges: ${totalEdges}`);
-
-  // VALIDATION: Analyze graph quality
+  // Validation
   console.log('\n=== Graph Quality Validation ===');
-  const nodeCount = nodeList.length;
+  const nodeCount = Object.keys(graph.nodesById).length;
   const avgEdgesPerNode = totalEdges / nodeCount;
-  const isolatedNodes = Object.entries(adjacency).filter(([_, edges]) => edges.length === 0);
-  const lowConnectivityNodes = Object.entries(adjacency).filter(([_, edges]) => edges.length === 1);
+  const isolatedNodes = Object.entries(graph.adjacency).filter(([_, edges]) => edges.length === 0);
 
   console.log(`Total nodes: ${nodeCount}`);
   console.log(`Total edges: ${totalEdges}`);
   console.log(`Average edges per node: ${avgEdgesPerNode.toFixed(2)}`);
-  console.log(`Isolated nodes (0 connections): ${isolatedNodes.length} (${(isolatedNodes.length/nodeCount*100).toFixed(1)}%)`);
-  console.log(`Low connectivity nodes (1 connection): ${lowConnectivityNodes.length} (${(lowConnectivityNodes.length/nodeCount*100).toFixed(1)}%)`);
+  console.log(`Isolated nodes: ${isolatedNodes.length} (${(isolatedNodes.length/nodeCount*100).toFixed(1)}%)`);
 
-  // Calculate max edge distance to detect incorrect long-range connections
-  let maxEdgeDistance = 0;
-  let avgEdgeDistance = 0;
-  let edgeDistances: number[] = [];
-
-  Object.values(adjacency).forEach(edges => {
-    edges.forEach(edge => {
-      if (edge.distance > maxEdgeDistance) maxEdgeDistance = edge.distance;
-      edgeDistances.push(edge.distance);
+  if (isolatedNodes.length > 0) {
+    console.log('\n⚠️  WARNING: Isolated nodes detected. These doors/nodes are not connected to the path network:');
+    isolatedNodes.slice(0, 5).forEach(([id]) => {
+      const node = graph.nodesById[id];
+      console.log(`   - ${id} at (${node.x.toFixed(1)}, ${node.y.toFixed(1)})`);
     });
-  });
-
-  if (edgeDistances.length > 0) {
-    avgEdgeDistance = edgeDistances.reduce((a, b) => a + b, 0) / edgeDistances.length;
-    edgeDistances.sort((a, b) => a - b);
-    const medianEdgeDistance = edgeDistances[Math.floor(edgeDistances.length / 2)];
-    console.log(`Edge distance stats: avg=${avgEdgeDistance.toFixed(1)}, median=${medianEdgeDistance.toFixed(1)}, max=${maxEdgeDistance.toFixed(1)}`);
-  }
-
-  // Quality warnings
-  const warnings: string[] = [];
-  if (avgEdgesPerNode < 2.5) {
-    warnings.push(`⚠️  Low connectivity (avg ${avgEdgesPerNode.toFixed(2)} edges/node, should be 3-4+)`);
-  }
-  if (isolatedNodes.length > nodeCount * 0.05) {
-    warnings.push(`⚠️  Too many isolated nodes (${isolatedNodes.length}, should be <5%)`);
-  }
-  if (maxEdgeDistance > 1000) {
-    warnings.push(`⚠️  Suspiciously long edge detected (${maxEdgeDistance.toFixed(1)} units) - may indicate incorrect connections`);
-  }
-  if (nodeCount < 500) {
-    warnings.push(`⚠️  Low node count (${nodeCount}) - consider reducing SAMPLE_DISTANCE for denser graph`);
-  }
-
-  if (warnings.length > 0) {
-    console.log('\n⚠️  GRAPH QUALITY WARNINGS:');
-    warnings.forEach(w => console.log(`   ${w}`));
+    if (isolatedNodes.length > 5) {
+      console.log(`   ... and ${isolatedNodes.length - 5} more`);
+    }
   } else {
-    console.log('\n✅ Graph quality looks good!');
+    console.log('\n✅ No isolated nodes - all doors connected!');
   }
   console.log('================================\n');
 
-  return { nodesById, adjacency };
+  return graph;
 }
 
 async function main() {

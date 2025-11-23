@@ -1,8 +1,7 @@
 "use client";
 
-import { ChevronDown, Sparkles, Search, X } from 'lucide-react';
+import { Sparkles, Search, X, MapPin, Tag as TagIcon, Star } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
-import { PLACE_CATEGORIES } from '@/lib/categories';
 
 type TabType = 'all' | 'deals' | 'events' | 'experiences' | 'places';
 
@@ -18,10 +17,7 @@ interface Props {
   onSelectPlace?: (placeId: string) => void;
 }
 
-const CATEGORIES = ['All categories', ...PLACE_CATEGORIES];
-
 const TABS: { id: TabType; label: string }[] = [
-  { id: 'all', label: 'All' },
   { id: 'places', label: 'Places' },
   { id: 'deals', label: 'Deals' },
   { id: 'events', label: 'Events' },
@@ -39,7 +35,8 @@ export default function SearchHeader({
   suggestions = [],
   onSelectPlace,
 }: Props) {
-  const [isOpen, setIsOpen] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(false);
   const [filteredSuggestions, setFilteredSuggestions] = useState(suggestions);
   const [highlightedIndex, setHighlightedIndex] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -81,30 +78,38 @@ export default function SearchHeader({
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
+        setShowSuggestions(false);
+        if (!keyword) {
+          setIsExpanded(false);
+        }
       }
     };
 
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+  }, [keyword]);
 
   const handleSelectSuggestion = (name: string, placeId: string) => {
     onKeywordChange(name);
-    setIsOpen(false);
+    setShowSuggestions(false);
     onSelectPlace?.(placeId);
   };
 
   const handleClear = () => {
     onKeywordChange('');
-    setIsOpen(false);
+    setShowSuggestions(false);
     inputRef.current?.focus();
   };
 
+  const handleSearchFocus = () => {
+    setIsExpanded(true);
+    setShowSuggestions(true);
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (!isOpen) {
+    if (!showSuggestions) {
       if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
-        setIsOpen(true);
+        setShowSuggestions(true);
         e.preventDefault();
       }
       return;
@@ -129,17 +134,20 @@ export default function SearchHeader({
         break;
       case 'Escape':
         e.preventDefault();
-        setIsOpen(false);
+        setShowSuggestions(false);
+        if (!keyword) {
+          setIsExpanded(false);
+        }
         break;
     }
   };
 
   return (
-    <div className="w-full max-w-xl space-y-3">
-      {/* Row 1: Keyword search + Category filter */}
+    <div className="w-full max-w-xl" ref={containerRef}>
+      {/* Compact Search Bar */}
       <div className="flex items-center gap-2">
-        {/* Keyword search input with predictive search */}
-        <div className="flex-1 relative" ref={containerRef}>
+        {/* Expandable Search Input */}
+        <div className="flex-1 relative">
           <div className="relative">
             <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4">
               <Search className="h-4 w-4 text-gray-400" />
@@ -150,12 +158,12 @@ export default function SearchHeader({
               value={keyword}
               onChange={(e) => {
                 onKeywordChange(e.target.value);
-                setIsOpen(true);
+                setShowSuggestions(true);
               }}
-              onFocus={() => setIsOpen(true)}
+              onFocus={handleSearchFocus}
               onKeyDown={handleKeyDown}
-              placeholder="Search for places, deals, events..."
-              className="w-full rounded-2xl border border-gray-300 bg-white px-4 py-3 pl-11 pr-10 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+              placeholder="Search"
+              className="w-full rounded-2xl border border-gray-300 bg-white px-4 py-3 pl-11 pr-10 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
             />
             {keyword && (
               <button
@@ -168,74 +176,87 @@ export default function SearchHeader({
             )}
           </div>
 
-          {/* Suggestions Dropdown */}
-          {isOpen && filteredSuggestions.length > 0 && (
-            <div className="absolute z-50 mt-2 max-h-64 w-full overflow-auto rounded-2xl border bg-white shadow-lg">
-              <ul className="py-2">
-                {filteredSuggestions.map((suggestion, index) => (
-                  <li key={suggestion.id}>
-                    <button
-                      type="button"
-                      onClick={() => handleSelectSuggestion(suggestion.name, suggestion.id)}
-                      onMouseEnter={() => setHighlightedIndex(index)}
-                      className={`w-full px-4 py-2.5 text-left transition-colors ${
-                        index === highlightedIndex
-                          ? 'bg-blue-50 text-blue-900'
-                          : 'hover:bg-gray-50'
-                      }`}
-                    >
-                      <div className="font-medium text-sm">{suggestion.name}</div>
-                      <div className="text-xs text-gray-500">{suggestion.category}</div>
-                    </button>
-                  </li>
-                ))}
-              </ul>
+          {/* Suggestions Dropdown - Only show when expanded and have suggestions */}
+          {isExpanded && showSuggestions && filteredSuggestions.length > 0 && (
+            <div className="absolute z-50 mt-2 max-h-80 w-full overflow-auto rounded-2xl border bg-white shadow-xl">
+              <div className="py-2">
+                <div className="px-4 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                  Suggestions
+                </div>
+                <ul>
+                  {filteredSuggestions.map((suggestion, index) => (
+                    <li key={suggestion.id}>
+                      <button
+                        type="button"
+                        onClick={() => handleSelectSuggestion(suggestion.name, suggestion.id)}
+                        onMouseEnter={() => setHighlightedIndex(index)}
+                        className={`w-full px-4 py-3 text-left transition-colors flex items-start gap-3 ${
+                          index === highlightedIndex
+                            ? 'bg-blue-50 text-blue-900'
+                            : 'hover:bg-gray-50'
+                        }`}
+                      >
+                        <MapPin className={`h-4 w-4 flex-shrink-0 mt-0.5 ${
+                          index === highlightedIndex ? 'text-blue-600' : 'text-gray-400'
+                        }`} />
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium text-sm truncate">{suggestion.name}</div>
+                          <div className="text-xs text-gray-500 flex items-center gap-1 mt-0.5">
+                            <TagIcon className="h-3 w-3" />
+                            {suggestion.category}
+                          </div>
+                        </div>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             </div>
           )}
         </div>
 
-        {/* Category dropdown */}
-        <div className="relative">
-          <select
-            value={selectedCategory}
-            onChange={(e) => onCategoryChange(e.target.value)}
-            className="appearance-none rounded-2xl border border-gray-300 bg-white pl-4 pr-10 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 cursor-pointer"
-          >
-            {CATEGORIES.map((cat) => (
-              <option key={cat} value={cat}>
-                {cat}
-              </option>
+        {/* AI Mode Button - Compact in header */}
+        <button
+          onClick={onOpenAI}
+          className="flex items-center gap-2 rounded-2xl border-2 border-purple-300 bg-gradient-to-r from-purple-50 to-blue-50 px-4 py-3 text-sm font-semibold text-purple-700 transition-all hover:border-purple-400 hover:from-purple-100 hover:to-blue-100 whitespace-nowrap"
+        >
+          <Sparkles className="h-4 w-4" />
+          <span>AI Mode</span>
+        </button>
+      </div>
+
+      {/* Expanded Content - Tabs and Lost AI prompt */}
+      {isExpanded && (
+        <div className="mt-3 space-y-3 animate-in fade-in slide-in-from-top-2 duration-200">
+          {/* Tabs */}
+          <div className="flex items-center gap-2 overflow-x-auto pb-1">
+            {TABS.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => onTabChange(tab.id)}
+                className={`whitespace-nowrap rounded-full px-4 py-2 text-sm font-medium transition-colors ${
+                  selectedTab === tab.id
+                    ? 'bg-blue-600 text-white shadow-sm'
+                    : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200'
+                }`}
+              >
+                {tab.label}
+              </button>
             ))}
-          </select>
-          <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
+          </div>
+
+          {/* Lost? Let AI guide you */}
+          <div className="text-sm text-gray-600 text-center py-2">
+            <button
+              onClick={onOpenAI}
+              className="text-purple-700 font-semibold hover:text-purple-800 inline-flex items-center gap-1"
+            >
+              Lost? Let AI guide you
+              <Sparkles className="h-4 w-4" />
+            </button>
+          </div>
         </div>
-      </div>
-
-      {/* Row 2: Tabs */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-1">
-        {TABS.map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => onTabChange(tab.id)}
-            className={`whitespace-nowrap rounded-full px-4 py-2 text-sm font-medium transition-colors ${
-              selectedTab === tab.id
-                ? 'bg-blue-600 text-white shadow-sm'
-                : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200'
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Row 3: AI Mode button */}
-      <button
-        onClick={onOpenAI}
-        className="flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-purple-300 bg-gradient-to-r from-purple-50 to-blue-50 px-4 py-3 text-sm font-semibold text-purple-700 transition-all hover:border-purple-400 hover:from-purple-100 hover:to-blue-100"
-      >
-        <Sparkles className="h-5 w-5" />
-        <span>Lost? Let AI guide you</span>
-      </button>
+      )}
     </div>
   );
 }

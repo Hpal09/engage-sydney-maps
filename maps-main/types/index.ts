@@ -66,9 +66,17 @@ export interface PathEdge {
   street?: string; // Street name for this edge
 }
 
+export interface PreDefinedRoute {
+  fromId: string;
+  toId: string;
+  path: Array<{ x: number; y: number }>;
+  streets: string[];
+}
+
 export interface PathGraph {
   nodesById: Record<string, PathNode>;
   adjacency: Record<string, Array<{ to: string; distance: number; points?: Array<{ x: number; y: number }>; street?: string }>>;
+  predefinedRoutes?: PreDefinedRoute[];
 }
 
 export interface RouteSummary {

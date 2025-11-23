@@ -1,9 +1,62 @@
-import type { Intersection, PathGraph, PathNode } from '@/types';
+import type { Intersection, PathGraph, PathNode, PreDefinedRoute } from '@/types';
+import { getDoorNodeForRoom, getAllDoorNodesForRoom } from './graphBuilder';
 
 function heuristic(a: PathNode, b: PathNode): number {
   const dx = a.x - b.x;
   const dy = a.y - b.y;
   return Math.hypot(dx, dy);
+}
+
+/**
+ * Find door node for a business/room
+ * Tries to match by room ID patterns
+ */
+export function findDoorNodeForBusiness(
+  graph: PathGraph,
+  businessName: string
+): PathNode | null {
+  // Try exact match first
+  let doorNode = getDoorNodeForRoom(graph, businessName);
+  if (doorNode) return doorNode;
+
+  // Try common variations
+  const variations = [
+    businessName.replace(/\s+/g, '_'),
+    businessName.replace(/\s+/g, ''),
+    businessName.toLowerCase().replace(/\s+/g, '_'),
+  ];
+
+  for (const variation of variations) {
+    doorNode = getDoorNodeForRoom(graph, variation);
+    if (doorNode) return doorNode;
+  }
+
+  return null;
+}
+
+/**
+ * Find the best node to use for navigation start/end
+ * Priority:
+ * 1. Door node (if business is a mapped room)
+ * 2. Nearest node (fallback for unmapped locations)
+ */
+export function findNavigationNode(
+  graph: PathGraph,
+  point: { x: number; y: number },
+  businessName?: string,
+  maxDistance: number = 500
+): PathNode | null {
+  // If business name provided, try to find door node
+  if (businessName) {
+    const doorNode = findDoorNodeForBusiness(graph, businessName);
+    if (doorNode) {
+      console.log(`✓ Using door node for ${businessName}: ${doorNode.id}`);
+      return doorNode;
+    }
+  }
+
+  // Fallback to nearest node
+  return findNearestNode(graph, point, maxDistance);
 }
 
 /**
@@ -158,14 +211,77 @@ export function findAnyRoute(graph: PathGraph, start: Intersection, end: Interse
  * 3. Falls back to BFS if A* fails
  * 4. Returns detailed diagnostics for debugging
  */
+/**
+ * Check if there's a pre-defined route between two Place IDs
+ * @param graph - The navigation graph
+ * @param fromId - Starting Place ID
+ * @param toId - Destination Place ID
+ * @returns Pre-defined route as PathNodes, or null if not found
+ */
+function findPredefinedRoute(
+  graph: PathGraph,
+  fromId: string | undefined,
+  toId: string | undefined
+): PathNode[] | null {
+  if (!fromId || !toId || !graph.predefinedRoutes || graph.predefinedRoutes.length === 0) {
+    return null;
+  }
+
+  // Check both directions (fromId→toId and toId→fromId)
+  const route = graph.predefinedRoutes.find(
+    r => (r.fromId === fromId && r.toId === toId) || (r.fromId === toId && r.toId === fromId)
+  );
+
+  if (!route) {
+    return null;
+  }
+
+  console.log(`✨ Found pre-defined route: ${route.fromId} → ${route.toId} (${route.path.length} points, streets: ${route.streets.join(', ')})`);
+
+  // Convert path points to PathNodes
+  const pathNodes: PathNode[] = route.path.map((point, i) => ({
+    id: `predefined_${route.fromId}_${route.toId}_${i}`,
+    x: point.x,
+    y: point.y,
+    street: route.streets[0] // TODO: Map streets to segments properly
+  }));
+
+  // Reverse if needed (if user is going from toId to fromId)
+  if (route.fromId === toId && route.toId === fromId) {
+    return pathNodes.reverse();
+  }
+
+  return pathNodes;
+}
+
 export function findRouteWithDiagnostics(
   graph: PathGraph,
   start: Intersection,
-  end: Intersection
+  end: Intersection,
+  startPlaceId?: string,
+  endPlaceId?: string
 ): PathfindingDiagnostics {
   console.log(`🗺️  Finding route with diagnostics from (${start.x.toFixed(1)}, ${start.y.toFixed(1)}) to (${end.x.toFixed(1)}, ${end.y.toFixed(1)})`);
 
-  // Try progressive distances: 500 → 1000 → 2000 units
+  // PRIORITY 1: Check for pre-defined demo routes first
+  const predefinedRoute = findPredefinedRoute(graph, startPlaceId, endPlaceId);
+  if (predefinedRoute && predefinedRoute.length >= 2) {
+    const startNode = predefinedRoute[0];
+    const endNode = predefinedRoute[predefinedRoute.length - 1];
+    const startDistance = Math.hypot(startNode.x - start.x, startNode.y - start.y);
+    const endDistance = Math.hypot(endNode.x - end.x, endNode.y - end.y);
+
+    return {
+      route: predefinedRoute,
+      startNode,
+      endNode,
+      startDistance,
+      endDistance,
+      algorithm: 'astar' // Mark as astar to indicate success
+    };
+  }
+
+  // PRIORITY 2: Try progressive distances: 500 → 1000 → 2000 units
   const maxDistances = [500, 1000, 2000];
   let startNode: PathNode | null = null;
   let endNode: PathNode | null = null;

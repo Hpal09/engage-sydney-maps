@@ -22,7 +22,7 @@ import CustomSydneyMap from '@/components/Map/CustomSydneyMap';
 
 import AISearch from '@/components/Search/AISearch';
 
-import SearchHeader from '@/components/Search/SearchHeader';
+import SearchWidget from '@/components/Search/SearchWidget';
 
 import MapDebugOverlay from '@/components/Debug/MapDebugOverlay';
 
@@ -36,7 +36,7 @@ import { getIntersectionsWithGps } from '@/data/intersections';
 
 import { findAnyRoute, findRoute, findRouteWithDiagnostics, type PathfindingDiagnostics } from '@/lib/pathfinding';
 
-import { buildPathNetwork } from '@/lib/svgParser';
+import { buildPathNetwork } from '@/lib/graphLoader';
 
 import { gpsToSvg, calculateDistance, isWithinMapBounds, setCalibration, getSvgBounds, normalizeLatitude, normalizeLongitude } from '@/lib/coordinateMapper';
 
@@ -523,6 +523,25 @@ export default function Page() {
 
 
 
+      // Validate API responses before using them
+      if (!Array.isArray(placesRes)) {
+        console.error('❌ Failed to load places from API:', placesRes);
+        setAllPlaces([]);
+        setFilteredPlaces([]);
+        setVisibleBusinesses([]);
+        return;
+      }
+
+      if (!Array.isArray(dealsRes)) {
+        console.error('❌ Failed to load deals from API:', dealsRes);
+        setAllDeals([]);
+      }
+
+      if (!Array.isArray(eventsRes)) {
+        console.error('❌ Failed to load events from API:', eventsRes);
+        setAllEvents([]);
+      }
+
       console.log("DEBUG allPlaces from DB:", placesRes.length);
 
       const rawPlaces = placesRes as Business[];
@@ -556,9 +575,9 @@ export default function Page() {
 
       setAllPlaces(normalizedPlaces);
 
-      setAllDeals(dealsRes as Deal[]);
+      setAllDeals(Array.isArray(dealsRes) ? dealsRes as Deal[] : []);
 
-      setAllEvents(eventsRes as Event[]);
+      setAllEvents(Array.isArray(eventsRes) ? eventsRes as Event[] : []);
 
       setZoomConfig(zoomConfigRes as ZoomConfig);
 
@@ -584,7 +603,22 @@ export default function Page() {
 
   }, []);
 
+  // Handle shared POI link (e.g., ?poi=business-id)
+  useEffect(() => {
+    if (allPlaces.length === 0) return;
 
+    const params = new URLSearchParams(window.location.search);
+    const poiId = params.get('poi');
+
+    if (poiId) {
+      const poi = allPlaces.find(place => place.id === poiId);
+      if (poi) {
+        setSelected(poi);
+        // Clean up URL without reloading page
+        window.history.replaceState({}, '', window.location.pathname);
+      }
+    }
+  }, [allPlaces]);
 
   // Comprehensive filtering logic: keyword + category + tab + nearMe
 
@@ -1522,9 +1556,10 @@ export default function Page() {
 
         (window as any).__SYD_GRAPH__ = g;
 
-        console.log('✅ Graph loaded:', Object.keys(g.nodesById).length, 'nodes',
-
-          Object.values(g.adjacency).reduce((a, b) => a + b.length, 0), 'edges');
+        const totalEdges = Object.values(g.adjacency).reduce((a, b) => a + b.length, 0);
+        const edgesWithStreets = Object.values(g.adjacency).flat().filter(e => e.street).length;
+        console.log('✅ Graph loaded:', Object.keys(g.nodesById).length, 'nodes', totalEdges, 'edges');
+        console.log('🏷️  Street names:', edgesWithStreets, 'edges have street names');
 
 
 
@@ -1632,8 +1667,8 @@ export default function Page() {
    */
 
   const startNavigation = async (
-    start: { lat: number; lng: number },
-    destination: { lat: number; lng: number },
+    start: { lat: number; lng: number; id?: string },
+    destination: { lat: number; lng: number; id?: string },
     options?: { startTurnByTurn?: boolean }
   ) => {
 
@@ -1706,8 +1741,8 @@ export default function Page() {
 
 
       // Use diagnostics function for better debugging and fallback
-
-      const diagnostics = findRouteWithDiagnostics(graph, startInt, endInt);
+      // Pass Place IDs for pre-defined route matching
+      const diagnostics = findRouteWithDiagnostics(graph, startInt, endInt, start.id, destination.id);
 
       setPathfindingDiag(diagnostics);  // Store for debug overlay
 
@@ -2219,7 +2254,7 @@ export default function Page() {
 
             {!aiMode ? (
 
-              <SearchHeader
+              <SearchWidget
 
                 keyword={keyword}
 
@@ -2238,7 +2273,11 @@ export default function Page() {
                 setAiMode(true);
               }}
 
-              suggestions={allPlaces.map(p => ({ id: p.id, name: p.name, category: p.category }))}
+              allPlaces={allPlaces}
+              filteredPlaces={filteredPlaces}
+              deals={allDeals}
+              events={allEvents}
+              userLocation={userLocation}
               onSelectPlace={handleSearchSelectPlace}
 
             />

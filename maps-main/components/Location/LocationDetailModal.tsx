@@ -1,6 +1,7 @@
 "use client";
 
-import { X, MapPin, Share2, GraduationCap, Info, Link, Calendar, Tag } from 'lucide-react';
+import { useState } from 'react';
+import { X, MapPin, Share2, GraduationCap, Info, Link, Calendar, Tag, Check } from 'lucide-react';
 import type { Business } from '@/types';
 import type { Deal, Event } from '@/lib/dataService';
 import { formatEventCategory } from '@/lib/categories';
@@ -16,18 +17,58 @@ interface Props {
 }
 
 export default function LocationDetailModal({ location, deals = [], events = [], onClose, onSetStart, onSetDestination, onTakeMeThere }: Props) {
+  const [shareStatus, setShareStatus] = useState<'idle' | 'copied' | 'shared'>('idle');
+
   if (!location) return null;
+
+  const handleShare = async () => {
+    // Generate shareable URL with POI ID
+    const url = new URL(window.location.href);
+    url.searchParams.set('poi', location.id);
+    const shareUrl = url.toString();
+
+    const shareData = {
+      title: location.name,
+      text: `Check out ${location.name} - ${location.category}`,
+      url: shareUrl,
+    };
+
+    try {
+      // Try Web Share API first (works on mobile)
+      if (navigator.share) {
+        await navigator.share(shareData);
+        setShareStatus('shared');
+        setTimeout(() => setShareStatus('idle'), 2000);
+      } else {
+        // Fallback to clipboard copy
+        await navigator.clipboard.writeText(shareUrl);
+        setShareStatus('copied');
+        setTimeout(() => setShareStatus('idle'), 2000);
+      }
+    } catch (error) {
+      // If sharing was cancelled or failed, try clipboard as last resort
+      if (error instanceof Error && error.name !== 'AbortError') {
+        try {
+          await navigator.clipboard.writeText(shareUrl);
+          setShareStatus('copied');
+          setTimeout(() => setShareStatus('idle'), 2000);
+        } catch (clipboardError) {
+          console.error('Failed to share:', clipboardError);
+        }
+      }
+    }
+  };
 
   return (
     <div className="pointer-events-auto fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-0">
-      <div className="w-full max-w-2xl rounded-t-3xl bg-white shadow-2xl" style={{ maxHeight: '90vh' }}>
+      <div className="w-full max-w-2xl rounded-t-3xl bg-white shadow-2xl flex flex-col" style={{ maxHeight: '90vh' }}>
         {/* Handle bar */}
-        <div className="flex justify-center pt-3">
+        <div className="flex justify-center pt-3 flex-shrink-0">
           <div className="h-1 w-12 rounded-full bg-gray-300"></div>
         </div>
 
         {/* Header */}
-        <div className="flex items-start justify-between p-5 pb-3">
+        <div className="flex items-start justify-between p-5 pb-3 flex-shrink-0">
           <div className="flex-1">
             <h2 className="text-2xl font-bold text-gray-900">{location.name}</h2>
             <div className="mt-1 text-sm text-gray-600">{location.category}</div>
@@ -46,7 +87,7 @@ export default function LocationDetailModal({ location, deals = [], events = [],
         </div>
 
         {/* Action Buttons */}
-        <div className="space-y-3 px-5 pb-4">
+        <div className="space-y-3 px-5 pb-4 flex-shrink-0">
           {/* Primary Action: Take me there */}
           <button
             onClick={() => onTakeMeThere(location)}
@@ -82,7 +123,7 @@ export default function LocationDetailModal({ location, deals = [], events = [],
         </div>
 
         {/* Image */}
-        <div className="mx-5 mb-4 overflow-hidden rounded-2xl bg-gradient-to-br from-blue-100 to-blue-200">
+        <div className="mx-5 mb-4 overflow-hidden rounded-2xl bg-gradient-to-br from-blue-100 to-blue-200 flex-shrink-0">
           <div className="flex h-48 items-center justify-center text-gray-400">
             <div className="text-center">
               <div className="text-6xl">🏛️</div>
@@ -92,7 +133,7 @@ export default function LocationDetailModal({ location, deals = [], events = [],
         </div>
 
         {/* Content */}
-        <div className="max-h-96 overflow-y-auto px-5 pb-5">
+        <div className="flex-1 min-h-0 overflow-y-auto px-5 pb-5">
           {/* Overview Section */}
           <div className="mb-5">
             <div className="mb-2 flex items-center gap-2 text-lg font-semibold text-gray-900">
@@ -231,12 +272,55 @@ export default function LocationDetailModal({ location, deals = [], events = [],
                 <div className="text-gray-600">{location.category}</div>
               </div>
             </div>
+
+            {/* Website URL */}
+            <div className="mt-4 pt-4 border-t border-gray-200">
+              <div className="flex items-center gap-2">
+                <Link className={`h-4 w-4 ${location.website ? 'text-blue-600' : 'text-gray-400'}`} />
+                <div className="flex-1">
+                  <div className="font-medium text-gray-900 text-sm">Website</div>
+                  {location.website ? (
+                    <a
+                      href={location.website}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm text-blue-600 hover:text-blue-700 hover:underline"
+                    >
+                      Visit website →
+                    </a>
+                  ) : (
+                    <div className="text-xs text-gray-400 italic">Link will be added soon</div>
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* Share Button */}
-          <button className="mt-4 flex w-full items-center justify-center gap-2 rounded-full bg-gray-100 py-3 font-medium text-gray-700 hover:bg-gray-200">
-            <Share2 className="h-4 w-4" />
-            Share Location
+          <button
+            onClick={handleShare}
+            className={`mt-4 flex w-full items-center justify-center gap-2 rounded-full py-3 font-medium transition-all ${
+              shareStatus === 'idle'
+                ? 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                : 'bg-green-100 text-green-700'
+            }`}
+          >
+            {shareStatus === 'idle' ? (
+              <>
+                <Share2 className="h-4 w-4" />
+                Share Location
+              </>
+            ) : shareStatus === 'copied' ? (
+              <>
+                <Check className="h-4 w-4" />
+                Link Copied!
+              </>
+            ) : (
+              <>
+                <Check className="h-4 w-4" />
+                Shared!
+              </>
+            )}
           </button>
         </div>
       </div>

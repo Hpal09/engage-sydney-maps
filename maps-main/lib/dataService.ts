@@ -73,7 +73,7 @@ export async function getDeals(): Promise<Deal[]> {
       },
     },
     include: {
-      place: {
+      Place: {
         select: {
           name: true,
         },
@@ -87,7 +87,7 @@ export async function getDeals(): Promise<Deal[]> {
   return deals.map((d) => ({
     id: d.id,
     placeId: d.placeId,
-    placeName: d.place.name,
+    placeName: d.Place.name,
     title: d.title,
     description: d.description,
     startsAt: d.startsAt,
@@ -108,7 +108,7 @@ export async function getEvents(): Promise<Event[]> {
       },
     },
     include: {
-      place: {
+      Place: {
         select: {
           name: true,
         },
@@ -122,7 +122,7 @@ export async function getEvents(): Promise<Event[]> {
   return events.map((e) => ({
     id: e.id,
     placeId: e.placeId,
-    placeName: e.place?.name ?? null,
+    placeName: e.Place?.name ?? null,
     title: e.title,
     description: e.description,
     category: e.category,

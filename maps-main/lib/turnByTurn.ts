@@ -90,20 +90,68 @@ export function calculateETA(distanceMeters: number): string {
   return `${hours}h ${minutes}m`;
 }
 
+/**
+ * Check if a node is a door node (entrance to a building)
+ */
+function isDoorNode(node: PathNode): boolean {
+  return node.id.startsWith('door_');
+}
+
+/**
+ * Extract landmark name from door node
+ * Example: "door_QVB_x5F_door1" -> "QVB"
+ */
+function getLandmarkName(node: PathNode): string | undefined {
+  if (!isDoorNode(node)) return undefined;
+
+  // Remove "door_" prefix
+  let name = node.id.replace(/^door_/, '');
+
+  // Remove _x5F_ encoding (URL encoded underscore)
+  name = name.replace(/_x5F_/g, '_');
+
+  // Remove _door suffix
+  name = name.replace(/_door\d*$/, '');
+
+  // Convert underscores to spaces for display
+  name = name.replace(/_/g, ' ');
+
+  return name;
+}
+
 export function getNextInstruction(route: PathNode[], user?: GpsPoint, graph?: import('@/types').PathGraph): { text: string; reachedDestination: boolean } {
   if (!route || route.length < 2) return { text: '', reachedDestination: false };
 
   // Helper function to get street name from edge between two nodes
   const getStreetName = (fromNode: PathNode, toNode: PathNode): string | undefined => {
-    if (!graph) return undefined;
+    if (!graph) {
+      console.log('⚠️  No graph provided to getNextInstruction');
+      return undefined;
+    }
     const edges = graph.adjacency[fromNode.id] || [];
     const edge = edges.find(e => e.to === toNode.id);
+    if (edge?.street) {
+      console.log('🏷️  Found street name:', edge.street, 'for edge', fromNode.id, '→', toNode.id);
+    } else {
+      console.log('⚠️  No street name for edge', fromNode.id, '→', toNode.id);
+    }
     return edge?.street;
   };
 
   if (!user) {
     const gps = nodesToGps(route);
     const dir = cardinalFromBearing(bearingDegrees(gps[0], gps[1]));
+
+    // Check if starting from a landmark
+    const startLandmark = getLandmarkName(route[0]);
+    if (startLandmark) {
+      const street = getStreetName(route[0], route[1]);
+      if (street) {
+        return { text: `Exit ${startLandmark} and head ${dir} on ${street}`, reachedDestination: false };
+      }
+      return { text: `Exit ${startLandmark} and head ${dir}`, reachedDestination: false };
+    }
+
     const street = getStreetName(route[0], route[1]);
     if (street) {
       return { text: `Head ${dir} on ${street}`, reachedDestination: false };
@@ -122,7 +170,20 @@ export function getNextInstruction(route: PathNode[], user?: GpsPoint, graph?: i
 
   // Destination check
   const distToEnd = calculateDistance(user, gps[gps.length - 1]);
-  if (distToEnd < 20) return { text: 'You have arrived', reachedDestination: true };
+  const destNode = route[route.length - 1];
+  const destLandmark = getLandmarkName(destNode);
+
+  if (distToEnd < 20) {
+    if (destLandmark) {
+      return { text: `You have arrived at ${destLandmark}`, reachedDestination: true };
+    }
+    return { text: 'You have arrived', reachedDestination: true };
+  }
+
+  // Check if approaching destination landmark
+  if (distToEnd < 50 && destLandmark) {
+    return { text: `Approaching ${destLandmark}`, reachedDestination: false };
+  }
 
   const idx = Math.min(bestIdx, gps.length - 2);
   const next = gps[idx + 1];
