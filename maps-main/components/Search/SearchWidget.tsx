@@ -7,15 +7,15 @@ import type { Business, DeviceLocation } from '@/types';
 import type { Deal, Event } from '@/lib/dataService';
 import { PLACE_CATEGORIES } from '@/lib/categories';
 
-type TabType = 'all' | 'deals' | 'events' | 'experiences' | 'places';
+type ToggleTabType = 'deals' | 'events' | 'experiences';
 
 interface Props {
   keyword: string;
   onKeywordChange: (value: string) => void;
   selectedCategory: string;
   onCategoryChange: (value: string) => void;
-  selectedTab: TabType;
-  onTabChange: (tab: TabType) => void;
+  activeTabs: Set<ToggleTabType>;
+  onTabToggle: (tab: ToggleTabType) => void;
   onOpenAI: () => void;
   allPlaces: Business[];
   filteredPlaces: Business[];
@@ -27,8 +27,7 @@ interface Props {
 
 const CATEGORIES = ['All categories', ...PLACE_CATEGORIES];
 
-const TABS: { id: TabType; label: string }[] = [
-  { id: 'places', label: 'Places' },
+const TOGGLE_TABS: { id: ToggleTabType; label: string }[] = [
   { id: 'deals', label: 'Deals' },
   { id: 'events', label: 'Events' },
   { id: 'experiences', label: 'Experiences' },
@@ -39,8 +38,8 @@ export default function SearchWidget({
   onKeywordChange,
   selectedCategory,
   onCategoryChange,
-  selectedTab,
-  onTabChange,
+  activeTabs,
+  onTabToggle,
   onOpenAI,
   allPlaces,
   filteredPlaces,
@@ -73,6 +72,12 @@ export default function SearchWidget({
     setIsOpen(false);
   };
 
+  // Determine which tab to pass to SearchResults (for display purposes)
+  const displayTab = activeTabs.size === 0 ? 'places' :
+    activeTabs.has('deals') ? 'deals' :
+    activeTabs.has('events') ? 'events' :
+    activeTabs.has('experiences') ? 'experiences' : 'places';
+
   return (
     <>
       {!isOpen ? (
@@ -98,14 +103,14 @@ export default function SearchWidget({
             </button>
           </div>
 
-          {/* Tabs - Always visible */}
+          {/* Toggle Tabs - Multi-select */}
           <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide">
-            {TABS.map((tab) => (
+            {TOGGLE_TABS.map((tab) => (
               <button
                 key={tab.id}
-                onClick={() => onTabChange(tab.id)}
+                onClick={() => onTabToggle(tab.id)}
                 className={`whitespace-nowrap rounded-full px-5 py-2.5 text-sm font-semibold transition-all ${
-                  selectedTab === tab.id
+                  activeTabs.has(tab.id)
                     ? 'bg-blue-600 text-white shadow-lg shadow-blue-200'
                     : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-200 hover:border-gray-300'
                 }`}
@@ -167,14 +172,14 @@ export default function SearchWidget({
               </button>
             </div>
 
-            {/* Tabs */}
+            {/* Toggle Tabs - Multi-select */}
             <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide">
-              {TABS.map((tab) => (
+              {TOGGLE_TABS.map((tab) => (
                 <button
                   key={tab.id}
-                  onClick={() => onTabChange(tab.id)}
+                  onClick={() => onTabToggle(tab.id)}
                   className={`whitespace-nowrap rounded-full px-5 py-2.5 text-sm font-semibold transition-all ${
-                    selectedTab === tab.id
+                    activeTabs.has(tab.id)
                       ? 'bg-blue-600 text-white shadow-lg shadow-blue-200'
                       : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-200 hover:border-gray-300'
                   }`}
@@ -208,7 +213,7 @@ export default function SearchWidget({
               deals={deals}
               events={events}
               userLocation={userLocation}
-              selectedTab={selectedTab}
+              selectedTab={displayTab}
               onSelectPlace={handleSelectPlace}
               onAddToList={handleAddToList}
             />

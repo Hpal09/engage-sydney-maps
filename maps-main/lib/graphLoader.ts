@@ -1,7 +1,7 @@
 // Client-side graph loader - loads pre-built graph from JSON
 import type { PathGraph } from '@/types';
 
-const MAX_STRAIGHT_EDGE_DISTANCE = 45; // px in viewBox space; prevents shortcuts through buildings
+const MAX_STRAIGHT_EDGE_DISTANCE = 120; // px in viewBox space; increased to preserve path connectivity
 
 let cachedGraph: PathGraph | null = null;
 

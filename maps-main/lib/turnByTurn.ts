@@ -119,6 +119,111 @@ function getLandmarkName(node: PathNode): string | undefined {
   return name;
 }
 
+export interface DirectionStep {
+  instruction: string;
+  distance: number; // meters
+  turnType: 'start' | 'left' | 'right' | 'straight' | 'arrive';
+  streetName?: string;
+}
+
+/**
+ * Generate all turn-by-turn directions for the entire route
+ */
+export function getAllDirections(route: PathNode[], graph?: import('@/types').PathGraph): DirectionStep[] {
+  if (!route || route.length < 2) return [];
+
+  const gps = nodesToGps(route);
+  const steps: DirectionStep[] = [];
+
+  // Helper to get street name from edge
+  const getStreetName = (fromNode: PathNode, toNode: PathNode): string | undefined => {
+    if (!graph) return undefined;
+    const edges = graph.adjacency[fromNode.id] || [];
+    const edge = edges.find(e => e.to === toNode.id);
+    return edge?.street;
+  };
+
+  // First step - starting direction
+  const startDir = cardinalFromBearing(bearingDegrees(gps[0], gps[1]));
+  const startLandmark = getLandmarkName(route[0]);
+  const firstStreet = getStreetName(route[0], route[1]);
+  const firstDist = calculateDistance(gps[0], gps[1]);
+
+  if (startLandmark) {
+    steps.push({
+      instruction: firstStreet
+        ? `Exit ${startLandmark} and head ${startDir} on ${firstStreet}`
+        : `Exit ${startLandmark} and head ${startDir}`,
+      distance: firstDist,
+      turnType: 'start',
+      streetName: firstStreet,
+    });
+  } else {
+    steps.push({
+      instruction: firstStreet
+        ? `Head ${startDir} on ${firstStreet}`
+        : `Head ${startDir}`,
+      distance: firstDist,
+      turnType: 'start',
+      streetName: firstStreet,
+    });
+  }
+
+  // Process each turn point
+  let accumulatedDistance = firstDist;
+  let currentStreet = firstStreet;
+
+  for (let i = 1; i < gps.length - 1; i++) {
+    const prevStreet = currentStreet;
+    const nextStreet = getStreetName(route[i], route[i + 1]);
+    const segmentDist = calculateDistance(gps[i], gps[i + 1]);
+
+    const turn = turnDirection(gps[i - 1], gps[i], gps[i + 1]);
+
+    // Check if there's a meaningful turn or street change
+    const streetChanged = nextStreet && prevStreet !== nextStreet;
+
+    if (turn !== 'straight' || streetChanged) {
+      if (turn === 'straight' && streetChanged) {
+        steps.push({
+          instruction: `Continue onto ${nextStreet}`,
+          distance: segmentDist,
+          turnType: 'straight',
+          streetName: nextStreet,
+        });
+      } else if (turn !== 'straight') {
+        steps.push({
+          instruction: nextStreet
+            ? `Turn ${turn} onto ${nextStreet}`
+            : `Turn ${turn}`,
+          distance: segmentDist,
+          turnType: turn,
+          streetName: nextStreet,
+        });
+      }
+      accumulatedDistance = segmentDist;
+    } else {
+      accumulatedDistance += segmentDist;
+    }
+
+    currentStreet = nextStreet;
+  }
+
+  // Final step - arrival
+  const destNode = route[route.length - 1];
+  const destLandmark = getLandmarkName(destNode);
+
+  steps.push({
+    instruction: destLandmark
+      ? `Arrive at ${destLandmark}`
+      : 'Arrive at destination',
+    distance: 0,
+    turnType: 'arrive',
+  });
+
+  return steps;
+}
+
 export function getNextInstruction(route: PathNode[], user?: GpsPoint, graph?: import('@/types').PathGraph): { text: string; reachedDestination: boolean } {
   if (!route || route.length < 2) return { text: '', reachedDestination: false };
 

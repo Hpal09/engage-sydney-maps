@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from 'react';
-import { X, MapPin, Share2, GraduationCap, Info, Link, Calendar, Tag, Check } from 'lucide-react';
+import { X, MapPin, Share2, GraduationCap, Info, Link, Calendar, Tag, Check, View } from 'lucide-react';
 import type { Business } from '@/types';
 import type { Deal, Event } from '@/lib/dataService';
 import { formatEventCategory } from '@/lib/categories';
@@ -124,12 +124,22 @@ export default function LocationDetailModal({ location, deals = [], events = [],
 
         {/* Image */}
         <div className="mx-5 mb-4 overflow-hidden rounded-2xl bg-gradient-to-br from-blue-100 to-blue-200 flex-shrink-0">
-          <div className="flex h-48 items-center justify-center text-gray-400">
-            <div className="text-center">
-              <div className="text-6xl">🏛️</div>
-              <div className="mt-2 text-sm">{location.name}</div>
+          {location.imageUrl ? (
+            <div className="h-48 w-full">
+              <img
+                src={location.imageUrl}
+                alt={location.name}
+                className="h-full w-full object-cover"
+              />
             </div>
-          </div>
+          ) : (
+            <div className="flex h-48 items-center justify-center text-gray-400">
+              <div className="text-center">
+                <div className="text-6xl">🏛️</div>
+                <div className="mt-2 text-sm">{location.name}</div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Content */}
@@ -291,6 +301,27 @@ export default function LocationDetailModal({ location, deals = [], events = [],
                   ) : (
                     <div className="text-xs text-gray-400 italic">Link will be added soon</div>
                   )}
+                </div>
+              </div>
+            </div>
+
+            {/* AR Experience */}
+            <div className="mt-4 pt-4 border-t border-gray-200">
+              <div className="flex items-center gap-2">
+                <View className="h-4 w-4 text-purple-600" />
+                <div className="flex-1">
+                  <div className="font-medium text-gray-900 text-sm">AR Experience</div>
+                  <a
+                    href="#ar-experience"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      // Placeholder - will open AR experience when URL is configured
+                      alert('AR Experience coming soon! This will launch an immersive AR view of ' + location.name);
+                    }}
+                    className="text-sm text-purple-600 hover:text-purple-700 hover:underline cursor-pointer"
+                  >
+                    View in AR →
+                  </a>
                 </div>
               </div>
             </div>

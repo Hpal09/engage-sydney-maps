@@ -37,11 +37,12 @@ interface Props {
   zoomConfig?: import('@/types').ZoomConfig; // Optional for backwards compatibility
   mapRotation?: number; // Rotation angle in degrees (0 = north-up, heading = heading-up)
   turnByTurnActive?: boolean; // Whether turn-by-turn navigation is active
+  showPOIMarkers?: boolean; // Show visible POI markers (when filtering is active)
 }
 
 const FALLBACK_VIEWBOX = `${VIEWBOX.minX} ${VIEWBOX.minY} ${VIEWBOX.width} ${VIEWBOX.height}`;
 
-export default function CustomSydneyMap({ businesses, selectedBusiness, userLocation, onBusinessClick, activeRoute, onCenterOnUser, onCenterOnPoint, smoothNavMarker, navigationStart, navigationDestination, showGraphOverlay = false, debugTransformLogTick, zoomConfig, mapRotation = 0, turnByTurnActive: turnByTurnActiveProp = false }: Props) {
+export default function CustomSydneyMap({ businesses, selectedBusiness, userLocation, onBusinessClick, activeRoute, onCenterOnUser, onCenterOnPoint, smoothNavMarker, navigationStart, navigationDestination, showGraphOverlay = false, debugTransformLogTick, zoomConfig, mapRotation = 0, turnByTurnActive: turnByTurnActiveProp = false, showPOIMarkers = false }: Props) {
   const wrapperRef = useRef<HTMLDivElement | null>(null);
   const transformRef = useRef<ReactZoomPanPinchRef | null>(null);
   const [svgLoaded, setSvgLoaded] = useState<boolean>(false);
@@ -560,7 +561,7 @@ export default function CustomSydneyMap({ businesses, selectedBusiness, userLoca
                   );
                 })()}
 
-                {/* Business markers - Simple transparent dots for performance */}
+                {/* Business markers - Visible when filtering, otherwise invisible but clickable */}
                 <g>
                   {markers.map((m) => (
                     <g
@@ -569,36 +570,99 @@ export default function CustomSydneyMap({ businesses, selectedBusiness, userLoca
                       className="cursor-pointer"
                       style={{ pointerEvents: 'auto' }}
                     >
-                      {/* Outer glow */}
-                      <circle
-                        cx={m.svg.x}
-                        cy={m.svg.y}
-                        r={12}
-                        fill={m.id === selectedBusiness?.id ? '#ef4444' : '#3b82f6'}
-                        opacity="0.3"
-                      />
-                      {/* Main dot */}
-                      <circle
-                        cx={m.svg.x}
-                        cy={m.svg.y}
-                        r={6}
-                        fill={m.id === selectedBusiness?.id ? '#ef4444' : '#3b82f6'}
-                        stroke="#fff"
-                        strokeWidth={2}
-                        opacity="0.9"
-                      />
+                      {showPOIMarkers ? (
+                        /* Visible POI pin marker when filtering is active */
+                        <>
+                          {/* Pin shadow */}
+                          <ellipse cx={m.svg.x + 1} cy={m.svg.y + 12} rx={4} ry={1.5} fill="#000" opacity="0.2" />
+                          {/* Pin body - Red location pin */}
+                          <path
+                            d={`M ${m.svg.x} ${m.svg.y - 10}
+                               C ${m.svg.x - 8} ${m.svg.y - 10}, ${m.svg.x - 8} ${m.svg.y - 4}, ${m.svg.x - 8} ${m.svg.y - 2}
+                               C ${m.svg.x - 8} ${m.svg.y + 2}, ${m.svg.x} ${m.svg.y + 8}, ${m.svg.x} ${m.svg.y + 10}
+                               C ${m.svg.x} ${m.svg.y + 8}, ${m.svg.x + 8} ${m.svg.y + 2}, ${m.svg.x + 8} ${m.svg.y - 2}
+                               C ${m.svg.x + 8} ${m.svg.y - 4}, ${m.svg.x + 8} ${m.svg.y - 10}, ${m.svg.x} ${m.svg.y - 10} Z`}
+                            fill="#ef4444"
+                            stroke="#b91c1c"
+                            strokeWidth={1}
+                          />
+                          {/* Inner white circle */}
+                          <circle cx={m.svg.x} cy={m.svg.y - 5} r={3} fill="#fff" />
+                        </>
+                      ) : (
+                        /* Invisible click target - opacity 0 but still clickable */
+                        <circle
+                          cx={m.svg.x}
+                          cy={m.svg.y}
+                          r={20}
+                          fill="#000"
+                          opacity="0"
+                        />
+                      )}
                     </g>
                   ))}
                 </g>
 
+                {/* Selected business highlight - Yellow pulsing ring */}
+                {selectedBusiness && (() => {
+                  const selectedSvg = projectLatLng(selectedBusiness.lat, selectedBusiness.lng);
+                  return (
+                    <g>
+                      {/* Outer pulsing ring */}
+                      <circle
+                        cx={selectedSvg.x}
+                        cy={selectedSvg.y}
+                        r={12}
+                        fill="none"
+                        stroke="#FFDA03"
+                        strokeWidth={2}
+                        opacity="0.4"
+                      >
+                        <animate
+                          attributeName="r"
+                          from="8"
+                          to="18"
+                          dur="1.5s"
+                          repeatCount="indefinite"
+                        />
+                        <animate
+                          attributeName="opacity"
+                          from="0.6"
+                          to="0"
+                          dur="1.5s"
+                          repeatCount="indefinite"
+                        />
+                      </circle>
+                      {/* Inner solid ring */}
+                      <circle
+                        cx={selectedSvg.x}
+                        cy={selectedSvg.y}
+                        r={8}
+                        fill="none"
+                        stroke="#FFDA03"
+                        strokeWidth={2.5}
+                        opacity="0.9"
+                      />
+                      {/* Center dot */}
+                      <circle
+                        cx={selectedSvg.x}
+                        cy={selectedSvg.y}
+                        r={3}
+                        fill="#FFDA03"
+                        opacity="1"
+                      />
+                    </g>
+                  );
+                })()}
+
                 {/* Active route overlay - draw BEFORE arrow so arrow is on top */}
                 {activeRoute && activeRoute.length >= 2 && (
                   <g>
-                    <path d={routeToSvgPath(activeRoute, (window as Window & { __SYD_GRAPH__?: import('@/types').PathGraph }).__SYD_GRAPH__)} stroke="#3b82f6" strokeWidth={8} fill="none" strokeLinejoin="round" strokeLinecap="round" opacity="0.9" />
+                    <path d={routeToSvgPath(activeRoute, (window as Window & { __SYD_GRAPH__?: import('@/types').PathGraph }).__SYD_GRAPH__)} stroke="#1e3a8a" strokeWidth={8} fill="none" strokeLinejoin="round" strokeLinecap="round" opacity="0.9" />
                   </g>
                 )}
 
-                {/* Start Point Marker (Green Pin) - Hidden when start is "my-location" */}
+                {/* Start Point Marker - Hidden when start is "my-location" */}
                 {navigationStart && navigationStart.id !== 'my-location' && (() => {
                   const startSvg = projectLatLng(navigationStart.lat, navigationStart.lng);
                   return (
@@ -608,32 +672,32 @@ export default function CustomSydneyMap({ businesses, selectedBusiness, userLoca
                       style={{ pointerEvents: 'auto' }}
                     >
                       {/* Pin shadow */}
-                      <ellipse cx={startSvg.x + 2} cy={startSvg.y + 30} rx={9} ry={4} fill="#000" opacity="0.3" />
+                      <ellipse cx={startSvg.x + 1} cy={startSvg.y + 18} rx={5} ry={2} fill="#000" opacity="0.3" />
 
-                      {/* Pin body - Green */}
+                      {/* Pin body - Dark Blue */}
                       <path
-                        d={`M ${startSvg.x} ${startSvg.y - 25}
-                           C ${startSvg.x - 20} ${startSvg.y - 25}, ${startSvg.x - 20} ${startSvg.y - 10}, ${startSvg.x - 20} ${startSvg.y - 5}
-                           C ${startSvg.x - 20} ${startSvg.y + 5}, ${startSvg.x} ${startSvg.y + 20}, ${startSvg.x} ${startSvg.y + 25}
-                           C ${startSvg.x} ${startSvg.y + 20}, ${startSvg.x + 20} ${startSvg.y + 5}, ${startSvg.x + 20} ${startSvg.y - 5}
-                           C ${startSvg.x + 20} ${startSvg.y - 10}, ${startSvg.x + 20} ${startSvg.y - 25}, ${startSvg.x} ${startSvg.y - 25} Z`}
-                        fill="#22c55e"
+                        d={`M ${startSvg.x} ${startSvg.y - 15}
+                           C ${startSvg.x - 12} ${startSvg.y - 15}, ${startSvg.x - 12} ${startSvg.y - 6}, ${startSvg.x - 12} ${startSvg.y - 3}
+                           C ${startSvg.x - 12} ${startSvg.y + 3}, ${startSvg.x} ${startSvg.y + 12}, ${startSvg.x} ${startSvg.y + 15}
+                           C ${startSvg.x} ${startSvg.y + 12}, ${startSvg.x + 12} ${startSvg.y + 3}, ${startSvg.x + 12} ${startSvg.y - 3}
+                           C ${startSvg.x + 12} ${startSvg.y - 6}, ${startSvg.x + 12} ${startSvg.y - 15}, ${startSvg.x} ${startSvg.y - 15} Z`}
+                        fill="#1e3a8a"
                         stroke="#fff"
-                        strokeWidth={4}
+                        strokeWidth={2}
                       />
 
                       {/* Pin center circle */}
-                      <circle cx={startSvg.x} cy={startSvg.y - 10} r={9} fill="#fff" />
+                      <circle cx={startSvg.x} cy={startSvg.y - 6} r={5} fill="#fff" />
 
                       {/* "S" for Start */}
-                      <text x={startSvg.x} y={startSvg.y - 5} textAnchor="middle" fontSize={18} fontWeight={700} fill="#22c55e">
+                      <text x={startSvg.x} y={startSvg.y - 3} textAnchor="middle" fontSize={10} fontWeight={700} fill="#1e3a8a">
                         S
                       </text>
                     </g>
                   );
                 })()}
 
-                {/* Destination Point Marker (Red Pin) */}
+                {/* Destination Point Marker */}
                 {navigationDestination && (() => {
                   const destSvg = projectLatLng(navigationDestination.lat, navigationDestination.lng);
                   return (
@@ -643,25 +707,25 @@ export default function CustomSydneyMap({ businesses, selectedBusiness, userLoca
                       style={{ pointerEvents: 'auto' }}
                     >
                       {/* Pin shadow */}
-                      <ellipse cx={destSvg.x + 2} cy={destSvg.y + 30} rx={9} ry={4} fill="#000" opacity="0.3" />
+                      <ellipse cx={destSvg.x + 1} cy={destSvg.y + 18} rx={5} ry={2} fill="#000" opacity="0.3" />
 
-                      {/* Pin body - Red */}
+                      {/* Pin body - Dark Blue */}
                       <path
-                        d={`M ${destSvg.x} ${destSvg.y - 25}
-                           C ${destSvg.x - 20} ${destSvg.y - 25}, ${destSvg.x - 20} ${destSvg.y - 10}, ${destSvg.x - 20} ${destSvg.y - 5}
-                           C ${destSvg.x - 20} ${destSvg.y + 5}, ${destSvg.x} ${destSvg.y + 20}, ${destSvg.x} ${destSvg.y + 25}
-                           C ${destSvg.x} ${destSvg.y + 20}, ${destSvg.x + 20} ${destSvg.y + 5}, ${destSvg.x + 20} ${destSvg.y - 5}
-                           C ${destSvg.x + 20} ${destSvg.y - 10}, ${destSvg.x + 20} ${destSvg.y - 25}, ${destSvg.x} ${destSvg.y - 25} Z`}
-                        fill="#ef4444"
+                        d={`M ${destSvg.x} ${destSvg.y - 15}
+                           C ${destSvg.x - 12} ${destSvg.y - 15}, ${destSvg.x - 12} ${destSvg.y - 6}, ${destSvg.x - 12} ${destSvg.y - 3}
+                           C ${destSvg.x - 12} ${destSvg.y + 3}, ${destSvg.x} ${destSvg.y + 12}, ${destSvg.x} ${destSvg.y + 15}
+                           C ${destSvg.x} ${destSvg.y + 12}, ${destSvg.x + 12} ${destSvg.y + 3}, ${destSvg.x + 12} ${destSvg.y - 3}
+                           C ${destSvg.x + 12} ${destSvg.y - 6}, ${destSvg.x + 12} ${destSvg.y - 15}, ${destSvg.x} ${destSvg.y - 15} Z`}
+                        fill="#1e3a8a"
                         stroke="#fff"
-                        strokeWidth={4}
+                        strokeWidth={2}
                       />
 
                       {/* Pin center circle */}
-                      <circle cx={destSvg.x} cy={destSvg.y - 10} r={9} fill="#fff" />
+                      <circle cx={destSvg.x} cy={destSvg.y - 6} r={5} fill="#fff" />
 
                       {/* "D" for Destination */}
-                      <text x={destSvg.x} y={destSvg.y - 5} textAnchor="middle" fontSize={18} fontWeight={700} fill="#ef4444">
+                      <text x={destSvg.x} y={destSvg.y - 3} textAnchor="middle" fontSize={10} fontWeight={700} fill="#1e3a8a">
                         D
                       </text>
                     </g>
@@ -694,37 +758,37 @@ export default function CustomSydneyMap({ businesses, selectedBusiness, userLoca
                           cx={0}
                           cy={0}
                           r={Math.max(40, userLocation.accuracy * 0.7)}
-                          fill="#4285F4"
-                          stroke="#4285F4"
+                          fill="#ffffff"
+                          stroke="#ffffff"
                           strokeWidth={0.8}
-                          opacity={0.15}
+                          opacity={0.1}
                         />
                       )}
 
                       {/* Cone/spotlight showing heading direction - semi-transparent beam */}
                       <path
                         d="M 0 0 L -7 -30 L 7 -30 Z"
-                        fill="#4285F4"
-                        opacity="0.4"
+                        fill="#ffffff"
+                        opacity="0.6"
                       />
 
-                      {/* Outer blue circle - main location marker */}
+                      {/* Outer circle - main location marker */}
                       <circle
                         cx={0}
                         cy={0}
                         r={6}
-                        fill="#4285F4"
+                        fill="#1e3a8a"
                         stroke="#ffffff"
                         strokeWidth={2}
                         opacity="1"
                       />
 
-                      {/* Inner white center dot */}
+                      {/* Inner center dot */}
                       <circle
                         cx={0}
                         cy={0}
                         r={2.5}
-                        fill="#ffffff"
+                        fill="#1e3a8a"
                         opacity="1"
                       />
 
@@ -735,9 +799,9 @@ export default function CustomSydneyMap({ businesses, selectedBusiness, userLoca
                           cy={0}
                           r={8}
                           fill="none"
-                          stroke="#4285F4"
+                          stroke="#ffffff"
                           strokeWidth={1.2}
-                          opacity="0.6"
+                          opacity="0.4"
                         >
                           <animate
                             attributeName="r"

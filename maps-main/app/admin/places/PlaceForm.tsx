@@ -16,6 +16,8 @@ export default function PlaceForm({ place, mode }: PlaceFormProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const [imageUrl, setImageUrl] = useState(place?.imageUrl || "");
 
   const [formData, setFormData] = useState({
     name: place?.name || "",
@@ -45,6 +47,36 @@ export default function PlaceForm({ place, mode }: PlaceFormProps) {
       ...prev,
       [name]: type === "checkbox" ? checked : value,
     }));
+  }
+
+  async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    setError("");
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const res = await fetch("/api/admin/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to upload image");
+      }
+
+      const data = await res.json();
+      setImageUrl(data.imageUrl);
+    } catch (err: any) {
+      setError(err.message || "Failed to upload image");
+    } finally {
+      setUploading(false);
+    }
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -78,6 +110,7 @@ export default function PlaceForm({ place, mode }: PlaceFormProps) {
         websiteUrl: formData.websiteUrl || null,
         openingHours: formData.openingHours || null,
         priceRange: formData.priceRange || null,
+        imageUrl: imageUrl || null,
         tags,
         isLive: formData.isLive,
       };
@@ -169,6 +202,55 @@ export default function PlaceForm({ place, mode }: PlaceFormProps) {
               </option>
             ))}
           </select>
+        </div>
+
+        {/* Image Upload */}
+        <div className="md:col-span-2">
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Place Image
+          </label>
+          <div className="flex items-start gap-4">
+            {imageUrl && (
+              <div className="relative w-48 h-48 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
+                <img
+                  src={imageUrl}
+                  alt="Place preview"
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            )}
+            <div className="flex-1">
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleImageUpload}
+                disabled={uploading}
+                className="block w-full text-sm text-gray-500
+                  file:mr-4 file:py-2 file:px-4
+                  file:rounded-lg file:border-0
+                  file:text-sm file:font-semibold
+                  file:bg-blue-50 file:text-blue-700
+                  hover:file:bg-blue-100
+                  file:cursor-pointer cursor-pointer
+                  disabled:opacity-50 disabled:cursor-not-allowed"
+              />
+              <p className="mt-2 text-xs text-gray-500">
+                Upload an image for this place. Supported formats: JPEG, PNG, WebP, GIF. Max size: 5MB.
+              </p>
+              {uploading && (
+                <p className="mt-2 text-sm text-blue-600">Uploading...</p>
+              )}
+              {imageUrl && (
+                <button
+                  type="button"
+                  onClick={() => setImageUrl("")}
+                  className="mt-2 text-sm text-red-600 hover:text-red-700"
+                >
+                  Remove image
+                </button>
+              )}
+            </div>
+          </div>
         </div>
 
         {/* Short Description */}

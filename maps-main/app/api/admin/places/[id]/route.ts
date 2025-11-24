@@ -22,6 +22,7 @@ export async function PUT(
         websiteUrl: body.websiteUrl,
         openingHours: body.openingHours,
         priceRange: body.priceRange,
+        imageUrl: body.imageUrl,
         tags: body.tags || [],
         isLive: body.isLive,
       },

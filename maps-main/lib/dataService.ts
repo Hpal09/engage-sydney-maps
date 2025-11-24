@@ -32,6 +32,8 @@ export async function getPlaces(): Promise<Business[]> {
     phone: p.phone ?? undefined,
     website: (p as any).website ?? undefined,
     rating: p.rating ?? undefined,
+    imageUrl: p.imageUrl ?? undefined,
+    tags: p.tags ?? [],
   }));
 
   return mapped;

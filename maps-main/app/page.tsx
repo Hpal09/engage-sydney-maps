@@ -229,8 +229,8 @@ const SMOOTHING = {
 
 
 const QVB_TELEPORT_COORD = Object.freeze({
-  lat: -33.87168857220928,
-  lng: 151.2067044424637,
+  lat: -33.87085879712593,
+  lng: 151.20695855393757,
 });
 
 const MAP_VERTICAL_SAFE_AREA = Object.freeze({ header: 100, footer: 80 });
@@ -283,17 +283,30 @@ export default function Page() {
 
   const [selectedCategory, setSelectedCategory] = useState('All categories');
 
-  const [selectedTab, setSelectedTab] = useState<'all' | 'deals' | 'events' | 'experiences' | 'places'>('all');
+  const [activeTabs, setActiveTabs] = useState<Set<'deals' | 'events' | 'experiences'>>(new Set());
+
+  // Toggle handler for multi-select tabs
+  const handleTabToggle = useCallback((tab: 'deals' | 'events' | 'experiences') => {
+    setActiveTabs(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(tab)) {
+        newSet.delete(tab);
+      } else {
+        newSet.add(tab);
+      }
+      return newSet;
+    });
+  }, []);
 
   const aiEntryContext = useMemo<AIEntryContext>(() => {
     if (keyword.trim()) return { type: 'query', query: keyword.trim() };
     if (selectedCategory && selectedCategory !== 'All categories') {
       return { type: 'category', category: selectedCategory };
     }
-    if (selectedTab === 'deals') return { type: 'category', category: 'deals' };
-    if (selectedTab === 'events' || selectedTab === 'experiences') return { type: 'category', category: 'events' };
+    if (activeTabs.has('deals')) return { type: 'category', category: 'deals' };
+    if (activeTabs.has('events') || activeTabs.has('experiences')) return { type: 'category', category: 'events' };
     return { type: 'fresh' };
-  }, [keyword, selectedCategory, selectedTab]);
+  }, [keyword, selectedCategory, activeTabs]);
 
   const [aiMode, setAiMode] = useState(false);
 
@@ -304,6 +317,8 @@ export default function Page() {
   const [navigationActive, setNavigationActive] = useState(false);
 
   const [activeRoute, setActiveRoute] = useState<PathNode[] | null>(null);
+
+  const [pathGraph, setPathGraph] = useState<import('@/types').PathGraph | null>(null);
 
   const intersections: Intersection[] = getIntersectionsWithGps();
 
@@ -344,6 +359,10 @@ export default function Page() {
   const [isOffRoute, setIsOffRoute] = useState<boolean>(false); // Track if user went off route
 
   const [distanceFromRoute, setDistanceFromRoute] = useState<number>(0); // Distance in meters from route
+
+  const [showArrivalMessage, setShowArrivalMessage] = useState(false); // Show "You have arrived" message
+
+  const [mockArrivedLocation, setMockArrivedLocation] = useState<DeviceLocation | null>(null); // Mock arrival mode - overrides GPS
 
   const [compassHeading, setCompassHeading] = useState<number | null>(null);
 
@@ -583,7 +602,7 @@ export default function Page() {
 
       setFilteredPlaces(normalizedPlaces); // initial view = all
 
-      setVisibleBusinesses(normalizedPlaces.slice(0, 8)); // Show first 8 initially
+      setVisibleBusinesses(normalizedPlaces); // Show all businesses on map
 
 
 
@@ -658,41 +677,51 @@ export default function Page() {
 
 
 
-    // Tab filter
+    // Tab filter - multi-select toggle tabs (Deals, Events, Experiences)
+    // If no tabs active, show all. If one or more active, show places matching ANY active tab.
 
-    if (selectedTab === "places" || selectedTab === "all") {
+    if (activeTabs.size > 0) {
 
-      // For now, places/all behave the same – all businesses.
-
-    } else if (selectedTab === "deals") {
-
-      // Filter to only places that have active deals
-
+      // Define filter criteria for each tab type
       const placeIdsWithDeals = new Set(allDeals.map(deal => deal.placeId));
-
-      result = result.filter(place => placeIdsWithDeals.has(place.id));
-
-      console.log('🏷️ Filtered to places with deals:', result.length);
-
-    } else if (selectedTab === "events") {
-
-      // Filter to only places hosting events
+      const dealTags = ['deal', 'deals', 'discount', 'offer', 'promotion', 'sale', 'special'];
+      const dealCategories = ['cafe', 'restaurant', 'food & drink', 'food court', 'thai', 'chinese', 'japanese', 'malaysian', 'coffee'];
 
       const placeIdsWithEvents = new Set(
-
         allEvents.filter(event => event.placeId).map(event => event.placeId!)
-
       );
+      const eventTags = ['event', 'events', 'live', 'show', 'concert', 'performance', 'venue', 'theatre'];
+      const eventCategories = ['venue', 'theatre', 'theater', 'bar', 'pub', 'club', 'music', 'entertainment'];
 
-      result = result.filter(place => placeIdsWithEvents.has(place.id));
+      const experienceTags = ['experience', 'experiences', 'tour', 'activity', 'attraction', 'museum', 'gallery', 'landmark', 'heritage', 'historic', 'shopping'];
+      const experienceCategories = ['experiences', 'attraction', 'museum', 'gallery', 'shopping', 'shopping center', 'landmark', 'park', 'garden'];
 
-      console.log('📅 Filtered to places with events:', result.length);
+      result = result.filter(place => {
+        const placeTags = (place.tags || []).map(t => t.toLowerCase());
+        const category = (place.category || '').toLowerCase();
 
-    } else if (selectedTab === "experiences") {
+        // Check if place matches ANY active tab (OR logic)
+        if (activeTabs.has('deals')) {
+          if (placeIdsWithDeals.has(place.id)) return true;
+          if (dealTags.some(tag => placeTags.includes(tag))) return true;
+          if (dealCategories.some(cat => category.includes(cat))) return true;
+        }
 
-      console.log("TODO: filter by curated experiences");
+        if (activeTabs.has('events')) {
+          if (placeIdsWithEvents.has(place.id)) return true;
+          if (eventTags.some(tag => placeTags.includes(tag))) return true;
+          if (eventCategories.some(cat => category.includes(cat))) return true;
+        }
 
-      // TODO: Filter to only places tagged as "experiences"
+        if (activeTabs.has('experiences')) {
+          if (experienceTags.some(tag => placeTags.includes(tag))) return true;
+          if (experienceCategories.some(cat => category.includes(cat))) return true;
+        }
+
+        return false;
+      });
+
+      console.log('🏷️ Filtered by active tabs:', Array.from(activeTabs), '→', result.length, 'places');
 
     }
 
@@ -734,9 +763,9 @@ export default function Page() {
 
     setFilteredPlaces(result);
 
-    setVisibleBusinesses(result.slice(0, 8)); // Show first 8 of filtered results
+    setVisibleBusinesses(result); // Show all filtered businesses on map
 
-  }, [allPlaces, allDeals, allEvents, keyword, selectedCategory, selectedTab, nearMeOnly, userLocation]);
+  }, [allPlaces, allDeals, allEvents, keyword, selectedCategory, activeTabs, nearMeOnly, userLocation]);
 
 
 
@@ -747,6 +776,12 @@ export default function Page() {
     const watchId = navigator.geolocation.watchPosition(
 
       (pos) => {
+
+        // Skip GPS updates if we're in mock arrival mode
+        if (mockArrivedLocation) {
+          console.log('📍 GPS update skipped - mock arrival mode active');
+          return;
+        }
 
         const fresh: DeviceLocation = {
 
@@ -1031,6 +1066,21 @@ export default function Page() {
 
           try {
 
+            // If start point is NOT "my-location", keep marker at route start during turn-by-turn
+            // This handles the case where user selects a POI as start point for demo purposes
+            if (turnByTurnActive && navigationStart && navigationStart.id !== 'my-location') {
+              const startPoint = activeRoute[0];
+              const nextPoint = activeRoute[1];
+              const dx = nextPoint.x - startPoint.x;
+              const dy = nextPoint.y - startPoint.y;
+              const angleDeg = (Math.atan2(dy, dx) * 180) / Math.PI;
+
+              const marker = { x: startPoint.x, y: startPoint.y, angleDeg };
+              navMarkerRef.current = marker;
+              setNavMarker(marker);
+              return; // Skip the normal position tracking
+            }
+
             // Convert user position to SVG coordinates ONCE (not in loop!)
 
             const userSvgPos = projectLatLng(shown.lat, shown.lng);
@@ -1142,7 +1192,7 @@ export default function Page() {
             // OFF-ROUTE DETECTION: Only active when turn-by-turn is enabled
             // For walking, we allow some deviation but detect clear wrong turns
 
-            const OFF_ROUTE_THRESHOLD = 25; // meters - if further than this, user went off route
+            const OFF_ROUTE_THRESHOLD = 200; // meters - increased for demo with simulated locations
 
             const distanceInMeters = bestDistToSegment * 0.1; // Approximate conversion from SVG units to meters
 
@@ -1210,23 +1260,7 @@ export default function Page() {
 
 
 
-            console.log('📍 Nav marker updated:', {
-
-              x: projX.toFixed(2),
-
-              y: projY.toFixed(2),
-
-              angle: angleDeg.toFixed(2),
-
-              segmentIdx: bestSegIdx,
-
-              distanceFromRoute: distanceInMeters.toFixed(1) + 'm',
-
-              offRoute: isOffRoute,
-
-              progress: (bestSegIdx / (activeRoute.length - 1) * 100).toFixed(1) + '%'
-
-            });
+            // Removed verbose logging for performance
 
           } catch (err) {
 
@@ -1260,7 +1294,7 @@ export default function Page() {
 
     return () => navigator.geolocation.clearWatch(watchId);
 
-  }, [activeRoute, projectLatLng, turnByTurnActive, simulateAtQvb]);
+  }, [activeRoute, projectLatLng, turnByTurnActive, simulateAtQvb, mockArrivedLocation]);
 
 
 
@@ -1268,92 +1302,51 @@ export default function Page() {
 
   useEffect(() => {
 
-    console.log('🔄 Smooth animation effect triggered, navMarker:', navMarker);
-
     if (!navMarker) {
-
-      console.log('❌ No navMarker, setting smoothNavMarker to null');
-
       setSmoothNavMarker(null);
-
       return;
-
     }
 
-    
-
-    console.log('✅ Starting smooth animation loop');
-
-    // Animate the nav marker smoothly using requestAnimationFrame
-
+    // Optimized animation - only update when there's significant change
     let animationFrame: number;
+    let lastUpdateTime = 0;
+    const UPDATE_INTERVAL = 50; // Update every 50ms (20fps) instead of 60fps
 
-    const animate = () => {
-
-      // Capture the current target to avoid race conditions
-
+    const animate = (timestamp: number) => {
       const target = navMarkerRef.current;
+      if (!target) return;
 
-      if (!target) {
-        // Navigation was cleared, stop animation
+      // Throttle updates to reduce re-renders
+      if (timestamp - lastUpdateTime < UPDATE_INTERVAL) {
+        animationFrame = requestAnimationFrame(animate);
         return;
       }
-
-
+      lastUpdateTime = timestamp;
 
       setSmoothNavMarker(prev => {
-
-        if (!prev) {
-
-          console.log('🎬 First frame, initializing smoothNavMarker:', target);
-
-          return target;
-
-        }
-
-
-
-        // Double-check target is still valid
-
-        if (!target) return prev;
-
-
+        if (!prev) return target;
 
         // Smooth position interpolation
-
-        const smoothFactor = 0.3; // Higher = faster catch-up (0.1-0.5)
-
+        const smoothFactor = 0.4; // Slightly faster for snappier feel
         const newX = prev.x + (target.x - prev.x) * smoothFactor;
-
         const newY = prev.y + (target.y - prev.y) * smoothFactor;
 
-
+        // Skip update if position hasn't changed significantly
+        const dx = Math.abs(newX - prev.x);
+        const dy = Math.abs(newY - prev.y);
+        if (dx < 0.1 && dy < 0.1) return prev;
 
         // Smooth angle interpolation with wrapping
-
         let angleDiff = target.angleDeg - prev.angleDeg;
-
-        // Handle angle wrapping (shortest path)
-
         if (angleDiff > 180) angleDiff -= 360;
-
         if (angleDiff < -180) angleDiff += 360;
-
         const newAngle = prev.angleDeg + angleDiff * smoothFactor;
 
-
-
         return { x: newX, y: newY, angleDeg: newAngle };
-
       });
 
-
-
       animationFrame = requestAnimationFrame(animate);
-
     };
-
-    
 
     animationFrame = requestAnimationFrame(animate);
 
@@ -1555,6 +1548,7 @@ export default function Page() {
         const g = await buildPathNetwork();
 
         (window as any).__SYD_GRAPH__ = g;
+        setPathGraph(g);
 
         const totalEdges = Object.values(g.adjacency).reduce((a, b) => a + b.length, 0);
         const edgesWithStreets = Object.values(g.adjacency).flat().filter(e => e.street).length;
@@ -1579,6 +1573,9 @@ export default function Page() {
 
         }
 
+      } else {
+        // Graph already loaded, just set the state
+        setPathGraph((window as any).__SYD_GRAPH__);
       }
 
     })();
@@ -1633,7 +1630,57 @@ export default function Page() {
 
   };
 
+  /**
+   * Mock Arrival Handler - For demo purposes
+   * Sets user location to destination and shows arrival message
+   */
+  const handleMockArrival = (destination: { lat: number; lng: number; label: string }) => {
+    console.log('🎯 Mock arrival at:', destination.label);
 
+    // Disable QVB simulation if active (we're now simulating arrival location instead)
+    if (simulateAtQvb) {
+      setSimulateAtQvb(false);
+      console.log('🔴 Disabled QVB simulation - now using mock arrival location');
+    }
+
+    // Set mock arrival location (this prevents GPS from overwriting)
+    const arrivedLocation: DeviceLocation = {
+      lat: destination.lat,
+      lng: destination.lng,
+      accuracy: 5,
+      heading: 0,
+      speed: 0,
+      timestamp: Date.now(),
+    };
+    setMockArrivedLocation(arrivedLocation);
+    setUserLocation(arrivedLocation);
+
+    // Show arrival message
+    setShowArrivalMessage(true);
+
+    // Clear navigation
+    clearAllNavigation();
+
+    // Update navigation start to the new arrival location
+    // This ensures "take me there" uses the arrival location as the start point
+    const myLocationBusiness: Business = {
+      id: 'my-location',
+      name: 'My location',
+      category: 'Current Position',
+      lat: destination.lat,
+      lng: destination.lng,
+    };
+    setNavigationStart(myLocationBusiness);
+    console.log('📍 Updated navigation start to arrival location:', destination.label);
+
+    // Center on new location
+    setCenterOnPoint({ lat: destination.lat, lng: destination.lng, tick: Date.now(), targetScale: 3.0 });
+
+    // Hide message after 3 seconds
+    setTimeout(() => {
+      setShowArrivalMessage(false);
+    }, 3000);
+  };
 
   // Combine GPS heading with compass heading (compass as fallback)
 
@@ -1671,6 +1718,9 @@ export default function Page() {
     destination: { lat: number; lng: number; id?: string },
     options?: { startTurnByTurn?: boolean }
   ) => {
+
+    // Don't clear mock arrival mode - let it persist during navigation
+    // This keeps the user at their mock arrival location when navigating to next destination
 
     // Ensure graph is loaded
 
@@ -1904,12 +1954,13 @@ export default function Page() {
     if (userLocation) {
 
       // Create a pseudo-Business from user location
+      // IMPORTANT: Use 'my-location' to match NavigationPanel's options id
 
       const userLocationBusiness: Business = {
 
-        id: 'user-location',
+        id: 'my-location',
 
-        name: 'My Location',
+        name: 'My location',
 
         category: 'Current Position',
 
@@ -2036,7 +2087,7 @@ export default function Page() {
 
           onCenterOnPoint={centerOnPoint}
 
-          smoothNavMarker={activeRoute ? smoothNavMarker : null}
+          smoothNavMarker={turnByTurnActive ? smoothNavMarker : null}
 
           navigationStart={navigationStart}
           navigationDestination={navigationDestination}
@@ -2045,6 +2096,7 @@ export default function Page() {
           zoomConfig={zoomConfig || undefined}
           mapRotation={mapRotation}
           turnByTurnActive={turnByTurnActive}
+          showPOIMarkers={activeTabs.size > 0}
         />
       </div>
 
@@ -2136,6 +2188,9 @@ export default function Page() {
 
                 if (!simulateAtQvb) {
 
+                  // Clear mock arrival mode when teleporting
+                  setMockArrivedLocation(null);
+
                   // Find QVB by name or use fallback coordinates
 
                   const qvbFromDb = allPlaces.find((b) =>
@@ -2185,6 +2240,9 @@ export default function Page() {
                   setSimulateAtQvb(true);
 
                 } else {
+
+                  // Clear mock arrival mode when stopping simulation
+                  setMockArrivedLocation(null);
 
                   setSimulateAtQvb(false);
 
@@ -2268,9 +2326,9 @@ export default function Page() {
 
                 onCategoryChange={setSelectedCategory}
 
-                selectedTab={selectedTab}
+                activeTabs={activeTabs}
 
-                onTabChange={setSelectedTab}
+                onTabToggle={handleTabToggle}
 
                 onOpenAI={() => {
                 setPendingQuery(keyword || undefined);
@@ -2363,6 +2421,12 @@ export default function Page() {
               startNavigation(start, destination, { startTurnByTurn: true });
 
             }}
+
+            activeRoute={activeRoute}
+
+            graph={pathGraph}
+
+            onMockArrival={handleMockArrival}
 
           />
 
@@ -2501,6 +2565,25 @@ export default function Page() {
       </div>
 
 
+
+      {/* Arrival Message - Shows when mock arrival is triggered */}
+      {showArrivalMessage && (
+        <div
+          className="fixed top-20 left-1/2 -translate-x-1/2 z-[99999] animate-in fade-in slide-in-from-top-4 duration-300"
+        >
+          <div className="bg-green-600 text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-3">
+            <div className="bg-white/20 rounded-full p-2">
+              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <div>
+              <div className="font-bold text-lg">You have arrived!</div>
+              <div className="text-sm text-green-100">Your location has been updated</div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Navigation Error Modal - OUTSIDE pointer-events-none container */}
 

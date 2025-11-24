@@ -1,11 +1,13 @@
 "use client";
 
-import { MapPin, Star, Plus, Tag as TagIcon, Calendar, Gift } from 'lucide-react';
+import { MapPin, Star, Plus, Tag as TagIcon, Calendar, Gift, ArrowUpDown } from 'lucide-react';
 import type { Business, DeviceLocation } from '@/types';
 import type { Deal, Event } from '@/lib/dataService';
 import { calculateDistance } from '@/lib/coordinateMapper';
 import { formatDistance } from '@/lib/turnByTurn';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
+
+type SortOption = 'distance' | 'relevance' | 'rating';
 
 // Google Maps-style navigation arrow component
 function NavigationArrow({ className }: { className?: string }) {
@@ -49,36 +51,88 @@ export default function SearchResults({
   onSelectPlace,
   onAddToList,
 }: Props) {
-  // Calculate distances for places
+  const [sortBy, setSortBy] = useState<SortOption>('distance');
+
+  // Calculate distances for places (don't sort here, we'll sort based on sortBy)
   const placesWithDistance = useMemo(() => {
-    if (!userLocation) return places;
     return places.map(place => ({
       ...place,
-      distance: calculateDistance(
-        { lat: userLocation.lat, lng: userLocation.lng },
-        { lat: place.lat, lng: place.lng }
-      ),
-    })).sort((a, b) => a.distance - b.distance);
+      distance: userLocation
+        ? calculateDistance(
+            { lat: userLocation.lat, lng: userLocation.lng },
+            { lat: place.lat, lng: place.lng }
+          )
+        : undefined,
+    }));
   }, [places, userLocation]);
 
   // Filter results based on selected tab
   const filteredPlaces = useMemo(() => {
+    let filtered: typeof placesWithDistance;
+
     switch (selectedTab) {
       case 'places':
-        return placesWithDistance;
+        filtered = placesWithDistance;
+        break;
       case 'deals':
         const placeIdsWithDeals = new Set(deals.map(d => d.placeId));
-        return placesWithDistance.filter(p => placeIdsWithDeals.has(p.id));
+        filtered = placesWithDistance.filter(p => placeIdsWithDeals.has(p.id));
+        break;
       case 'events':
         const placeIdsWithEvents = new Set(events.filter(e => e.placeId).map(e => e.placeId!));
-        return placesWithDistance.filter(p => placeIdsWithEvents.has(p.id));
+        filtered = placesWithDistance.filter(p => placeIdsWithEvents.has(p.id));
+        break;
       case 'experiences':
         // TODO: Add experiences filtering
-        return placesWithDistance;
+        filtered = placesWithDistance;
+        break;
       default:
-        return placesWithDistance;
+        filtered = placesWithDistance;
     }
-  }, [selectedTab, placesWithDistance, deals, events]);
+
+    // Apply sorting
+    return [...filtered].sort((a, b) => {
+      switch (sortBy) {
+        case 'distance':
+          // Sort by distance (closest first), places without distance go last
+          const distA = a.distance ?? Infinity;
+          const distB = b.distance ?? Infinity;
+          return distA - distB;
+
+        case 'rating':
+          // Sort by rating (highest first), places without rating go last
+          const ratingA = a.rating ?? 0;
+          const ratingB = b.rating ?? 0;
+          return ratingB - ratingA;
+
+        case 'relevance':
+          // Relevance: prioritize places with deals/events, then by rating, then by distance
+          const aHasDeals = deals.some(d => d.placeId === a.id && d.isLive);
+          const bHasDeals = deals.some(d => d.placeId === b.id && d.isLive);
+          const aHasEvents = events.some(e => e.placeId === a.id && e.isLive);
+          const bHasEvents = events.some(e => e.placeId === b.id && e.isLive);
+
+          // Score: deals (2 points) + events (1 point)
+          const aScore = (aHasDeals ? 2 : 0) + (aHasEvents ? 1 : 0);
+          const bScore = (bHasDeals ? 2 : 0) + (bHasEvents ? 1 : 0);
+
+          if (aScore !== bScore) return bScore - aScore;
+
+          // Then by rating
+          const rA = a.rating ?? 0;
+          const rB = b.rating ?? 0;
+          if (rA !== rB) return rB - rA;
+
+          // Finally by distance
+          const dA = a.distance ?? Infinity;
+          const dB = b.distance ?? Infinity;
+          return dA - dB;
+
+        default:
+          return 0;
+      }
+    });
+  }, [selectedTab, placesWithDistance, deals, events, sortBy]);
 
   const getDealsForPlace = (placeId: string) => {
     return deals.filter(d => d.placeId === placeId && d.isLive);
@@ -102,13 +156,30 @@ export default function SearchResults({
 
   return (
     <div className="space-y-3">
-      <div className="px-2 pb-2 text-xs font-bold text-gray-600 uppercase tracking-wider flex items-center justify-between">
-        <span>Results ({filteredPlaces.length})</span>
-        <select className="text-xs font-semibold bg-white border border-gray-200 rounded-lg px-2 py-1 outline-none cursor-pointer hover:border-gray-300 transition-colors">
-          <option value="distance">Distance</option>
-          <option value="relevance">Relevance</option>
-          <option value="rating">Rating</option>
-        </select>
+      <div className="px-2 pb-3 flex items-center justify-between">
+        <span className="text-xs font-bold text-gray-600 uppercase tracking-wider">
+          Results ({filteredPlaces.length})
+        </span>
+        <div className="relative">
+          <div className="flex items-center gap-1.5">
+            <ArrowUpDown className="h-3.5 w-3.5 text-gray-500" />
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as SortOption)}
+              className="text-xs font-semibold text-gray-700 bg-white border border-gray-200 rounded-xl px-3 py-1.5 pr-7 outline-none cursor-pointer hover:border-blue-400 hover:bg-blue-50 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all appearance-none"
+              style={{
+                backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236B7280'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`,
+                backgroundRepeat: 'no-repeat',
+                backgroundPosition: 'right 8px center',
+                backgroundSize: '14px',
+              }}
+            >
+              <option value="distance">Distance</option>
+              <option value="relevance">Relevance</option>
+              <option value="rating">Rating</option>
+            </select>
+          </div>
+        </div>
       </div>
 
       {filteredPlaces.map((place) => {
@@ -148,9 +219,9 @@ export default function SearchResults({
                     </div>
                   )}
 
-                  {typeof (place as any).distance === 'number' && (
+                  {typeof place.distance === 'number' && (
                     <div className="text-xs text-gray-500 font-medium">
-                      • {formatDistance((place as any).distance)}
+                      • {formatDistance(place.distance)}
                     </div>
                   )}
                 </div>

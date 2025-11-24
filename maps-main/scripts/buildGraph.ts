@@ -7,6 +7,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { parseSVGMap } from '../lib/svgParser';
 import { buildGraphFromSVG } from '../lib/graphBuilder';
+import { GPS_CORNERS, VIEWBOX, CONTROL_POINTS } from '../lib/mapConfig';
 
 interface PathNode {
   id: string;
@@ -136,20 +137,103 @@ function samplePath(points: Array<{ x: number; y: number }>): Array<{ x: number;
   return sampled;
 }
 
-// Simplified GPS conversion (matches coordinateMapper.ts fallback)
-// MUST match the actual SVG viewBox dimensions and GPS corners from coordinateMapper.ts!
+// GPS conversion using affine transformation from control points
+// This provides much better accuracy than simple linear interpolation
+function solveAffineTransformForSvgToGps(): { A: number[] | null, inv: number[] | null } {
+  const points = CONTROL_POINTS;
+  if (points.length < 3) return { A: null, inv: null };
+
+  // Build least squares solution for SVG -> GPS transformation
+  const n = points.length;
+  let sXX = 0, sXY = 0, sX = 0, sY = 0, sYY = 0;
+  let sLatX = 0, sLatY = 0, sLat = 0;
+  let sLngX = 0, sLngY = 0, sLng = 0;
+
+  for (const p of points) {
+    const X = p.svgX;
+    const Y = p.svgY;
+    sXX += X * X;
+    sXY += X * Y;
+    sYY += Y * Y;
+    sX += X;
+    sY += Y;
+    sLatX += p.lat * X;
+    sLatY += p.lat * Y;
+    sLat += p.lat;
+    sLngX += p.lng * X;
+    sLngY += p.lng * Y;
+    sLng += p.lng;
+  }
+
+  // Solve normal equations [a1 a2 a3] for lat = a1*x + a2*y + a3
+  const M = [
+    sXX, sXY, sX,
+    sXY, sYY, sY,
+    sX,  sY,  n,
+  ];
+
+  function invert3x3(m: number[]): number[] | null {
+    const [a,b,c,d,e,f,g,h,i] = m;
+    const A = e * i - f * h;
+    const B = -(d * i - f * g);
+    const C = d * h - e * g;
+    const D = -(b * i - c * h);
+    const E = a * i - c * g;
+    const F = -(a * h - b * g);
+    const G = b * f - c * e;
+    const H = -(a * f - c * d);
+    const I = a * e - b * d;
+    const det = a * A + b * B + c * C;
+    if (!isFinite(det) || Math.abs(det) < 1e-12) return null;
+    const invDet = 1 / det;
+    return [A*invDet, D*invDet, G*invDet, B*invDet, E*invDet, H*invDet, C*invDet, F*invDet, I*invDet];
+  }
+
+  function multiply3x3Vec(A: number[], v: [number, number, number]): [number, number, number] {
+    return [
+      A[0] * v[0] + A[1] * v[1] + A[2] * v[2],
+      A[3] * v[0] + A[4] * v[1] + A[5] * v[2],
+      A[6] * v[0] + A[7] * v[1] + A[8] * v[2],
+    ];
+  }
+
+  const Minv = invert3x3(M);
+  if (!Minv) return { A: null, inv: null };
+
+  const bLat = [sLatX, sLatY, sLat] as [number, number, number];
+  const bLng = [sLngX, sLngY, sLng] as [number, number, number];
+  const aLat = multiply3x3Vec(Minv, bLat); // [a1, a2, a3] for lat
+  const aLng = multiply3x3Vec(Minv, bLng); // [a4, a5, a6] for lng
+
+  // Affine matrix: [lat, lng, 1]^T = A * [x, y, 1]^T
+  const A = [aLat[0], aLat[1], aLat[2], aLng[0], aLng[1], aLng[2], 0, 0, 1];
+  const inv = invert3x3(A);
+
+  return { A, inv };
+}
+
+// Pre-compute the transformation matrix
+const svgToGpsTransform = solveAffineTransformForSvgToGps();
+
+// GPS conversion using calibrated control points for accuracy
+// Falls back to simple linear interpolation if calibration fails
 function simpleGpsConversion(x: number, y: number): { lat: number; lng: number } {
-  // Updated to match actual SVG file: viewBox="0 0 726.77 1643.6"
-  const SVG_WIDTH = 726.77;
-  const SVG_HEIGHT = 1643.6;
+  // Use calibrated affine transformation if available
+  if (svgToGpsTransform.A) {
+    const [lat, lng, _w] = [
+      svgToGpsTransform.A[0] * x + svgToGpsTransform.A[1] * y + svgToGpsTransform.A[2],
+      svgToGpsTransform.A[3] * x + svgToGpsTransform.A[4] * y + svgToGpsTransform.A[5],
+      1
+    ];
+    return { lat, lng };
+  }
 
-  // Updated to match GPS_CORNERS from coordinateMapper.ts
-  const GPS_TOP_LEFT = { lat: -33.85915499, lng: 151.19767695 };      // Northwest corner
-  const GPS_TOP_RIGHT = { lat: -33.85915499, lng: 151.23189309 };     // Northeast corner
-  const GPS_BOTTOM_LEFT = { lat: -33.90132204, lng: 151.19767695 };   // Southwest corner
+  // Fallback: Use GPS_CORNERS from mapConfig.ts for simple linear interpolation
+  const SVG_WIDTH = VIEWBOX.width;
+  const SVG_HEIGHT = VIEWBOX.height;
 
-  const lng = GPS_TOP_LEFT.lng + (x / SVG_WIDTH) * (GPS_TOP_RIGHT.lng - GPS_TOP_LEFT.lng);
-  const lat = GPS_TOP_LEFT.lat - (y / SVG_HEIGHT) * (GPS_TOP_LEFT.lat - GPS_BOTTOM_LEFT.lat);
+  const lng = GPS_CORNERS.topLeft.lng + (x / SVG_WIDTH) * (GPS_CORNERS.topRight.lng - GPS_CORNERS.topLeft.lng);
+  const lat = GPS_CORNERS.topLeft.lat - (y / SVG_HEIGHT) * (GPS_CORNERS.topLeft.lat - GPS_CORNERS.bottomLeft.lat);
 
   return { lat, lng };
 }

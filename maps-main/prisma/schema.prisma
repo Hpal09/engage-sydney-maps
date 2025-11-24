@@ -8,16 +8,16 @@ datasource db {
 }
 
 model AdminUser {
-  id           String   @id
+  id           String   @id @default(cuid())
   email        String   @unique
   passwordHash String   @map("password_hash")
   role         String   @default("admin")
   createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @map("updated_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
 }
 
 model Deal {
-  id          String   @id
+  id          String   @id @default(cuid())
   placeId     String   @map("place_id")
   title       String
   description String?
@@ -26,12 +26,12 @@ model Deal {
   isLive      Boolean  @default(true) @map("is_live")
   tags        String[]
   createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @map("updated_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
   Place       Place    @relation(fields: [placeId], references: [id])
 }
 
 model Event {
-  id          String   @id
+  id          String   @id @default(cuid())
   placeId     String?  @map("place_id")
   title       String
   description String?
@@ -41,12 +41,12 @@ model Event {
   category    String
   tags        String[]
   createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @map("updated_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
   Place       Place?   @relation(fields: [placeId], references: [id])
 }
 
 model Place {
-  id               String   @id
+  id               String   @id @default(cuid())
   name             String
   shortDescription String?  @map("short_description")
   fullDescription  String?  @map("full_description")
@@ -60,22 +60,23 @@ model Place {
   openingHours     String?  @map("opening_hours")
   priceRange       String?  @map("price_range")
   rating           Float?
+  imageUrl         String?  @map("image_url")
   isLive           Boolean  @default(true) @map("is_live")
   createdAt        DateTime @default(now()) @map("created_at")
-  updatedAt        DateTime @map("updated_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
   Deal             Deal[]
   Event            Event[]
 }
 
 model MapSettings {
-  id            Int      @id @default(1)
-  initialZoom   Float    @default(2.5) @map("initial_zoom")
-  placeZoom     Float    @default(2.8) @map("place_zoom")
-  destZoom      Float    @default(2.8) @map("dest_zoom")
-  navZoom       Float    @default(3.0) @map("nav_zoom")
-  navStartZoom  Float    @default(3.5) @map("nav_start_zoom")
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @updatedAt @map("updated_at")
+  id           Int      @id @default(1)
+  initialZoom  Float    @default(2.5) @map("initial_zoom")
+  placeZoom    Float    @default(2.8) @map("place_zoom")
+  destZoom     Float    @default(2.8) @map("dest_zoom")
+  navZoom      Float    @default(3.0) @map("nav_zoom")
+  navStartZoom Float    @default(3.5) @map("nav_start_zoom")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
 
   @@map("map_settings")
 }

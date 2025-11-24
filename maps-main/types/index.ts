@@ -11,6 +11,8 @@ export interface Business {
   phone?: string;
   website?: string;
   rating?: number;
+  imageUrl?: string;
+  tags?: string[];
 }
 
 export interface SearchResult {

@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { Business, DeviceLocation } from '@/types';
-import { ArrowUpDown, Navigation, Clock, ChevronUp } from 'lucide-react';
+import type { Business, DeviceLocation, PathNode, PathGraph } from '@/types';
+import { ArrowUpDown, Navigation, Clock, ChevronUp, ChevronDown, CornerUpLeft, CornerUpRight, ArrowUp, MapPin, CheckCircle2 } from 'lucide-react';
 import { calculateDistance } from '@/lib/coordinateMapper';
-import { formatDistance, calculateETA } from '@/lib/turnByTurn';
+import { formatDistance, calculateETA, getAllDirections, type DirectionStep } from '@/lib/turnByTurn';
 import PredictiveSearch from '@/components/Search/PredictiveSearch';
 
 interface Waypoint {
@@ -28,9 +28,12 @@ interface Props {
   onStartTurnByTurn?: (start: Waypoint, destination: Waypoint) => void;
   navigationActive?: boolean;
   turnByTurnActive?: boolean;
+  activeRoute?: PathNode[] | null;
+  graph?: PathGraph | null;
+  onMockArrival?: (destination: Waypoint) => void;
 }
 
-export default function NavigationPanel({ businesses, userLocation, defaultDestination, externalStart, externalDestination, onStartJourney, onClearNavigation, title = 'Engage ByDisrupt', onSelectMyLocation, onSelectStartPoint, onStartTurnByTurn, navigationActive = false, turnByTurnActive = false }: Props) {
+export default function NavigationPanel({ businesses, userLocation, defaultDestination, externalStart, externalDestination, onStartJourney, onClearNavigation, title = 'Engage ByDisrupt', onSelectMyLocation, onSelectStartPoint, onStartTurnByTurn, navigationActive = false, turnByTurnActive = false, activeRoute, graph, onMockArrival }: Props) {
   const options: Waypoint[] = useMemo(() => {
     const list: Waypoint[] = [];
     if (userLocation) {
@@ -83,12 +86,17 @@ export default function NavigationPanel({ businesses, userLocation, defaultDesti
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [startId, destId]); // Only depend on the IDs to avoid re-triggering on function reference changes
 
-  // If user picks My location as start, trigger recenter callback
+  // If user picks My location as start, trigger recenter callback (only once)
+  const lastCenteredStartId = useRef<string | null>(null);
   useEffect(() => {
-    if (startId === 'my-location') {
-      onSelectMyLocation?.();
-    } else if (startId && start) {
-      onSelectStartPoint?.(start);
+    // Only center if this is a NEW start point selection
+    if (startId && startId !== lastCenteredStartId.current) {
+      lastCenteredStartId.current = startId;
+      if (startId === 'my-location') {
+        onSelectMyLocation?.();
+      } else if (start) {
+        onSelectStartPoint?.(start);
+      }
     }
   }, [startId, start, onSelectMyLocation, onSelectStartPoint]);
 
@@ -96,6 +104,15 @@ export default function NavigationPanel({ businesses, userLocation, defaultDesti
   const [open, setOpen] = useState<boolean>(false);
   const contentRef = useRef<HTMLDivElement>(null);
   const [contentHeight, setContentHeight] = useState<number>(0);
+
+  // Expandable directions state
+  const [directionsExpanded, setDirectionsExpanded] = useState<boolean>(false);
+
+  // Compute all directions for the route
+  const directions = useMemo(() => {
+    if (!activeRoute || activeRoute.length < 2) return [];
+    return getAllDirections(activeRoute, graph ?? undefined);
+  }, [activeRoute, graph]);
 
   useEffect(() => {
     const el = contentRef.current;
@@ -106,7 +123,7 @@ export default function NavigationPanel({ businesses, userLocation, defaultDesti
     const ro = new ResizeObserver(measure);
     ro.observe(el);
     return () => ro.disconnect();
-  }, [open, startId, destId, options.length]);
+  }, [open, startId, destId, options.length, directionsExpanded]);
 
   const summaryText = useMemo(() => {
     const startLabel = start?.label ?? 'Start';
@@ -244,31 +261,80 @@ export default function NavigationPanel({ businesses, userLocation, defaultDesti
             label="Destination"
           />
 
-          {/* Distance and ETA Display */}
+          {/* Distance and ETA Display with Expandable Directions */}
           {distanceMeters !== null && start && dest && (
-            <div className="rounded-2xl bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 px-5 py-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="rounded-full bg-blue-600 p-2">
-                    <Navigation className="h-5 w-5 text-white" />
-                  </div>
-                  <div>
-                    <div className="text-xs text-gray-600 font-medium mb-0.5">Trip Details</div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-2xl font-bold text-gray-900">
-                        {formatDistance(distanceMeters)}
-                      </span>
-                      <span className="text-gray-400">•</span>
-                      <div className="flex items-center gap-1.5">
-                        <Clock className="h-4 w-4 text-blue-600" />
-                        <span className="text-lg font-semibold text-blue-600">
-                          {calculateETA(distanceMeters)}
+            <div className="rounded-2xl bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 overflow-hidden">
+              {/* Trip summary - clickable to expand */}
+              <button
+                type="button"
+                onClick={() => setDirectionsExpanded(!directionsExpanded)}
+                className="w-full px-5 py-4 text-left"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="rounded-full bg-blue-600 p-2">
+                      <Navigation className="h-5 w-5 text-white" />
+                    </div>
+                    <div>
+                      <div className="text-xs text-gray-600 font-medium mb-0.5">Trip Details</div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-2xl font-bold text-gray-900">
+                          {formatDistance(distanceMeters)}
                         </span>
+                        <span className="text-gray-400">•</span>
+                        <div className="flex items-center gap-1.5">
+                          <Clock className="h-4 w-4 text-blue-600" />
+                          <span className="text-lg font-semibold text-blue-600">
+                            {calculateETA(distanceMeters)}
+                          </span>
+                        </div>
                       </div>
                     </div>
                   </div>
+                  <div className={`transition-transform duration-200 ${directionsExpanded ? 'rotate-180' : ''}`}>
+                    <ChevronDown className="h-5 w-5 text-gray-500" />
+                  </div>
                 </div>
-              </div>
+              </button>
+
+              {/* Expandable directions list */}
+              {directionsExpanded && directions.length > 0 && (
+                <div className="border-t border-blue-200 px-4 py-3 max-h-64 overflow-y-auto">
+                  <div className="space-y-3">
+                    {directions.map((step, idx) => {
+                      const getTurnIcon = (turnType: DirectionStep['turnType']) => {
+                        switch (turnType) {
+                          case 'left':
+                            return <CornerUpLeft className="h-4 w-4 text-blue-600" />;
+                          case 'right':
+                            return <CornerUpRight className="h-4 w-4 text-blue-600" />;
+                          case 'arrive':
+                            return <MapPin className="h-4 w-4 text-green-600" />;
+                          default:
+                            return <ArrowUp className="h-4 w-4 text-blue-600" />;
+                        }
+                      };
+
+                      return (
+                        <div
+                          key={idx}
+                          className={`flex items-start gap-3 ${idx === directions.length - 1 ? '' : 'pb-3 border-b border-blue-100'}`}
+                        >
+                          <div className={`mt-0.5 rounded-full p-1.5 ${step.turnType === 'arrive' ? 'bg-green-100' : 'bg-blue-100'}`}>
+                            {getTurnIcon(step.turnType)}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-gray-900">{step.instruction}</p>
+                            {step.distance > 0 && (
+                              <p className="text-xs text-gray-500 mt-0.5">{formatDistance(step.distance)}</p>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -290,6 +356,17 @@ export default function NavigationPanel({ businesses, userLocation, defaultDesti
               </button>
             )}
           </div>
+
+          {/* Mock Arrival Button - For demo purposes */}
+          {navigationActive && dest && onMockArrival && (
+            <button
+              onClick={() => onMockArrival(dest)}
+              className="mt-3 w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-green-600 px-5 py-3 text-base font-semibold text-white shadow hover:bg-green-700"
+            >
+              <CheckCircle2 className="h-5 w-5" />
+              Mock Arrival (Demo)
+            </button>
+          )}
             </div>
           </div>
         </div>
