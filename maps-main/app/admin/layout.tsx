@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { LayoutDashboard, MapPin, Tag, Calendar, User, Settings } from "lucide-react";
+import { LayoutDashboard, MapPin, Tag, Calendar, User, Settings, MessageSquare, Building2 } from "lucide-react";
 
 export default function AdminLayout({
   children,
@@ -9,8 +9,10 @@ export default function AdminLayout({
   const navigation = [
     { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
     { name: "Places", href: "/admin/places", icon: MapPin },
+    { name: "Indoor Maps", href: "/admin/buildings", icon: Building2 },
     { name: "Deals", href: "/admin/deals", icon: Tag },
     { name: "Events", href: "/admin/events", icon: Calendar },
+    { name: "Feedback", href: "/admin/feedback", icon: MessageSquare },
     { name: "Map Settings", href: "/admin/map-settings", icon: Settings },
     { name: "Account", href: "/admin/account", icon: User },
   ];
