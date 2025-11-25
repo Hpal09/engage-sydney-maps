@@ -13,6 +13,13 @@ export async function getPlaces(): Promise<Business[]> {
     where: {
       isLive: true,
     },
+    include: {
+      Building: {
+        select: {
+          id: true,
+        },
+      },
+    },
     orderBy: {
       name: "asc",
     },
@@ -34,6 +41,7 @@ export async function getPlaces(): Promise<Business[]> {
     rating: p.rating ?? undefined,
     imageUrl: p.imageUrl ?? undefined,
     tags: p.tags ?? [],
+    hasIndoorMap: !!p.Building, // Check if this place has indoor navigation
   }));
 
   return mapped;

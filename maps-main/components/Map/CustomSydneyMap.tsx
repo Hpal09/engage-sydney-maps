@@ -38,11 +38,16 @@ interface Props {
   mapRotation?: number; // Rotation angle in degrees (0 = north-up, heading = heading-up)
   turnByTurnActive?: boolean; // Whether turn-by-turn navigation is active
   showPOIMarkers?: boolean; // Show visible POI markers (when filtering is active)
+  indoorModeActive?: boolean; // Whether indoor navigation mode is active
+  buildingData?: any; // Building data with floors and connection points
+  selectedFloorId?: string | null; // Currently selected floor ID
+  onExitIndoorMode?: () => void; // Callback to exit indoor mode
+  onFloorChange?: (floorId: string) => void; // Callback when floor changes
 }
 
 const FALLBACK_VIEWBOX = `${VIEWBOX.minX} ${VIEWBOX.minY} ${VIEWBOX.width} ${VIEWBOX.height}`;
 
-export default function CustomSydneyMap({ businesses, selectedBusiness, userLocation, onBusinessClick, activeRoute, onCenterOnUser, onCenterOnPoint, smoothNavMarker, navigationStart, navigationDestination, showGraphOverlay = false, debugTransformLogTick, zoomConfig, mapRotation = 0, turnByTurnActive: turnByTurnActiveProp = false, showPOIMarkers = false }: Props) {
+export default function CustomSydneyMap({ businesses, selectedBusiness, userLocation, onBusinessClick, activeRoute, onCenterOnUser, onCenterOnPoint, smoothNavMarker, navigationStart, navigationDestination, showGraphOverlay = false, debugTransformLogTick, zoomConfig, mapRotation = 0, turnByTurnActive: turnByTurnActiveProp = false, showPOIMarkers = false, indoorModeActive = false, buildingData, selectedFloorId, onExitIndoorMode, onFloorChange }: Props) {
   const wrapperRef = useRef<HTMLDivElement | null>(null);
   const transformRef = useRef<ReactZoomPanPinchRef | null>(null);
   const [svgLoaded, setSvgLoaded] = useState<boolean>(false);
@@ -171,7 +176,20 @@ export default function CustomSydneyMap({ businesses, selectedBusiness, userLoca
 
   // Preload SVG image and extract viewBox to set bounds
   useEffect(() => {
-    fetch('/maps/20251028SydneyMap-01.svg')
+    // Reset loading state when switching maps
+    setSvgLoaded(false);
+
+    // Determine which SVG to load based on indoor mode
+    let svgPath = '/maps/20251028SydneyMap-01.svg'; // Default outdoor map
+
+    if (indoorModeActive && buildingData && selectedFloorId) {
+      const selectedFloor = buildingData.floors?.find((f: any) => f.id === selectedFloorId);
+      if (selectedFloor?.svgPath) {
+        svgPath = selectedFloor.svgPath;
+      }
+    }
+
+    fetch(svgPath)
       .then((r) => r.text())
       .then((txt) => {
         const m = txt.match(/viewBox\s*=\s*"([^"]+)"/i);
@@ -220,7 +238,7 @@ export default function CustomSydneyMap({ businesses, selectedBusiness, userLoca
         setSvgLoaded(true);
       })
       .catch(() => setSvgLoaded(false));
-  }, []);
+  }, [indoorModeActive, buildingData, selectedFloorId]);
 
   const markers = useMemo(() => {
     return businesses.map((b, idx) => {
@@ -366,6 +384,18 @@ export default function CustomSydneyMap({ businesses, selectedBusiness, userLoca
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [onCenterOnUser, mapLoaded, zoomConfig]);
+
+  // Reset and center view when indoor mode changes or floor changes
+  useEffect(() => {
+    if (!transformRef.current || !svgLoaded) return;
+
+    // Reset transform to fit the entire SVG in view
+    requestAnimationFrame(() => {
+      if (transformRef.current) {
+        transformRef.current.resetTransform(300);
+      }
+    });
+  }, [indoorModeActive, selectedFloorId, svgLoaded]);
 
   // 4) Update map rotation continuously during turn-by-turn navigation
   useEffect(() => {
@@ -833,8 +863,87 @@ export default function CustomSydneyMap({ businesses, selectedBusiness, userLoca
                   );
                 })}
 
+                {/* Indoor navigation connection points */}
+                {indoorModeActive && buildingData && selectedFloorId && (() => {
+                  const selectedFloor = buildingData.floors?.find((f: any) => f.id === selectedFloorId);
+                  if (!selectedFloor?.connectionPoints) return null;
+
+                  return selectedFloor.connectionPoints.map((point: any) => (
+                    <g key={point.id}>
+                      {/* Connection point marker */}
+                      <circle
+                        cx={point.x}
+                        cy={point.y}
+                        r={12}
+                        fill={point.type === 'elevator' ? '#8b5cf6' : '#3b82f6'}
+                        opacity={0.9}
+                        stroke="white"
+                        strokeWidth={2}
+                      />
+                      {/* Icon text */}
+                      <text
+                        x={point.x}
+                        y={point.y}
+                        textAnchor="middle"
+                        dominantBaseline="central"
+                        fill="white"
+                        fontSize="10"
+                        fontWeight="bold"
+                      >
+                        {point.type === 'elevator' ? 'E' : 'S'}
+                      </text>
+                      {/* Label */}
+                      <text
+                        x={point.x}
+                        y={point.y + 20}
+                        textAnchor="middle"
+                        fill="#1f2937"
+                        fontSize="8"
+                        fontWeight="500"
+                      >
+                        {point.name}
+                      </text>
+                    </g>
+                  ));
+                })()}
+
               </SvgDebugWrapper>
             </TransformComponent>
+
+            {/* Indoor mode floor selector and exit button */}
+            {indoorModeActive && buildingData && onExitIndoorMode && (
+              <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 flex flex-col gap-2 items-center">
+                {/* Exit button */}
+                <button
+                  onClick={onExitIndoorMode}
+                  className="px-4 py-2 bg-gray-900 text-white rounded-full shadow-lg hover:bg-gray-800 transition-colors flex items-center gap-2 text-sm font-medium"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                  </svg>
+                  Exit Indoor Map
+                </button>
+
+                {/* Floor selector */}
+                {buildingData.floors && buildingData.floors.length > 1 && onFloorChange && (
+                  <div className="bg-white rounded-full shadow-lg p-1 flex gap-1">
+                    {buildingData.floors.map((floor: any) => (
+                      <button
+                        key={floor.id}
+                        onClick={() => onFloorChange(floor.id)}
+                        className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                          selectedFloorId === floor.id
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-white text-gray-700 hover:bg-gray-100'
+                        }`}
+                      >
+                        {floor.name}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </>
         )}
       </TransformWrapper>

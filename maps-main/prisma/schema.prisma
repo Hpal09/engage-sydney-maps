@@ -46,26 +46,28 @@ model Event {
 }
 
 model Place {
-  id               String   @id @default(cuid())
+  id               String     @id @default(cuid())
   name             String
-  shortDescription String?  @map("short_description")
-  fullDescription  String?  @map("full_description")
+  shortDescription String?    @map("short_description")
+  fullDescription  String?    @map("full_description")
   category         String
   tags             String[]
   lat              Float
   lng              Float
   address          String?
-  websiteUrl       String?  @map("website_url")
+  websiteUrl       String?    @map("website_url")
   phone            String?
-  openingHours     String?  @map("opening_hours")
-  priceRange       String?  @map("price_range")
+  openingHours     String?    @map("opening_hours")
+  priceRange       String?    @map("price_range")
   rating           Float?
-  imageUrl         String?  @map("image_url")
-  isLive           Boolean  @default(true) @map("is_live")
-  createdAt        DateTime @default(now()) @map("created_at")
-  updatedAt        DateTime @updatedAt @map("updated_at")
+  imageUrl         String?    @map("image_url")
+  isLive           Boolean    @default(true) @map("is_live")
+  createdAt        DateTime   @default(now()) @map("created_at")
+  updatedAt        DateTime   @updatedAt @map("updated_at")
   Deal             Deal[]
   Event            Event[]
+  Feedback         Feedback[]
+  Building         Building?
 }
 
 model MapSettings {
@@ -79,4 +81,71 @@ model MapSettings {
   updatedAt    DateTime @updatedAt @map("updated_at")
 
   @@map("map_settings")
+}
+
+model Feedback {
+  id         String   @id @default(cuid())
+  placeId    String   @map("place_id")
+  rating     Int?     // 1-5 rating
+  comment    String?  @db.Text
+  category   String?  // e.g., "accuracy", "hours", "info", "general"
+  status     String   @default("pending") // pending, reviewed, resolved, dismissed
+  isFlagged  Boolean  @default(false) @map("is_flagged")
+  isEscalated Boolean @default(false) @map("is_escalated")
+  adminNotes String?  @db.Text @map("admin_notes")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @default(now()) @updatedAt @map("updated_at")
+  Place      Place    @relation(fields: [placeId], references: [id], onDelete: Cascade)
+
+  @@index([placeId])
+  @@index([status])
+  @@index([isFlagged])
+  @@index([isEscalated])
+  @@map("feedback")
+}
+
+// Indoor Navigation Models
+model Building {
+  id        String   @id @default(cuid())
+  placeId   String   @unique @map("place_id")
+  name      String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  Place     Place    @relation(fields: [placeId], references: [id], onDelete: Cascade)
+  floors    Floor[]
+
+  @@map("buildings")
+}
+
+model Floor {
+  id               String            @id @default(cuid())
+  buildingId       String            @map("building_id")
+  name             String            // "Ground Floor", "Level One", etc.
+  floorNumber      Int               @map("floor_number") // 0 for ground, 1 for level one, etc.
+  svgPath          String            @map("svg_path") // Path to SVG file
+  createdAt        DateTime          @default(now()) @map("created_at")
+  updatedAt        DateTime          @updatedAt @map("updated_at")
+  Building         Building          @relation(fields: [buildingId], references: [id], onDelete: Cascade)
+  connectionPoints ConnectionPoint[]
+
+  @@index([buildingId])
+  @@map("floors")
+}
+
+model ConnectionPoint {
+  id                  String   @id @default(cuid())
+  floorId             String   @map("floor_id")
+  type                String   // "stairs" or "elevator"
+  name                String   // "Stair 1 West", "Elevator 2 East", etc.
+  x                   Float    // SVG X coordinate
+  y                   Float    // SVG Y coordinate
+  connectsToFloorId   String?  @map("connects_to_floor_id") // For stairs/elevators
+  isAccessible        Boolean  @default(true) @map("is_accessible") // false for stairs in accessibility mode
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+  Floor               Floor    @relation(fields: [floorId], references: [id], onDelete: Cascade)
+
+  @@index([floorId])
+  @@index([type])
+  @@map("connection_points")
 }

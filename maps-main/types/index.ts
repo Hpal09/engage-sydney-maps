@@ -13,6 +13,7 @@ export interface Business {
   rating?: number;
   imageUrl?: string;
   tags?: string[];
+  hasIndoorMap?: boolean; // Indicates if this place has indoor navigation
 }
 
 export interface SearchResult {

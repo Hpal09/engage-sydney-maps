@@ -326,6 +326,11 @@ export default function Page() {
 
   const [centerOnPoint, setCenterOnPoint] = useState<{ lat: number; lng: number; tick: number; targetScale?: number } | null>(null);
 
+  // Indoor navigation state
+  const [indoorModeActive, setIndoorModeActive] = useState(false);
+  const [selectedFloorId, setSelectedFloorId] = useState<string | null>(null);
+  const [buildingData, setBuildingData] = useState<any>(null);
+
   const [debugTransformLogTick, setDebugTransformLogTick] = useState(0);
 
   const [showOutOfArea, setShowOutOfArea] = useState(false);
@@ -507,7 +512,30 @@ export default function Page() {
     });
   }, [allPlaces, zoomConfig]);
 
+  const handleOpenIndoorMap = useCallback(async (placeId: string) => {
+    try {
+      const response = await fetch(`/api/indoor-nav/${placeId}`);
+      if (!response.ok) {
+        console.error('Failed to fetch building data');
+        return;
+      }
+      const data = await response.json();
+      setBuildingData(data.building);
+      setIndoorModeActive(true);
+      // Select the first floor (ground floor)
+      if (data.building?.floors?.length > 0) {
+        setSelectedFloorId(data.building.floors[0].id);
+      }
+    } catch (error) {
+      console.error('Error opening indoor map:', error);
+    }
+  }, []);
 
+  const handleExitIndoorMode = useCallback(() => {
+    setIndoorModeActive(false);
+    setSelectedFloorId(null);
+    setBuildingData(null);
+  }, []);
 
   // Load places, deals, and events on mount
 
@@ -2097,6 +2125,11 @@ export default function Page() {
           mapRotation={mapRotation}
           turnByTurnActive={turnByTurnActive}
           showPOIMarkers={activeTabs.size > 0}
+          indoorModeActive={indoorModeActive}
+          buildingData={buildingData}
+          selectedFloorId={selectedFloorId}
+          onExitIndoorMode={handleExitIndoorMode}
+          onFloorChange={setSelectedFloorId}
         />
       </div>
 
@@ -2555,6 +2588,8 @@ export default function Page() {
               }}
 
               onTakeMeThere={handleTakeMeThere}
+
+              onOpenIndoorMap={handleOpenIndoorMap}
 
             />
 

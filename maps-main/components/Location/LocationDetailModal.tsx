@@ -14,12 +14,16 @@ interface Props {
   onSetStart: () => void;
   onSetDestination: () => void;
   onTakeMeThere: (business: Business) => void;
+  onOpenIndoorMap?: (placeId: string) => void;
 }
 
-export default function LocationDetailModal({ location, deals = [], events = [], onClose, onSetStart, onSetDestination, onTakeMeThere }: Props) {
+export default function LocationDetailModal({ location, deals = [], events = [], onClose, onSetStart, onSetDestination, onTakeMeThere, onOpenIndoorMap }: Props) {
   const [shareStatus, setShareStatus] = useState<'idle' | 'copied' | 'shared'>('idle');
 
   if (!location) return null;
+
+  // Check if this location has indoor navigation available
+  const hasIndoorNav = location.hasIndoorMap === true;
 
   const handleShare = async () => {
     // Generate shareable URL with POI ID
@@ -326,6 +330,17 @@ export default function LocationDetailModal({ location, deals = [], events = [],
               </div>
             </div>
           </div>
+
+          {/* Indoor Map Button (for any location with indoor navigation) */}
+          {hasIndoorNav && onOpenIndoorMap && (
+            <button
+              onClick={() => onOpenIndoorMap(location.id)}
+              className="mt-4 flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-purple-600 to-purple-700 py-3 font-semibold text-white shadow-lg hover:from-purple-700 hover:to-purple-800"
+            >
+              <MapPin className="h-5 w-5" />
+              Open Indoor Map
+            </button>
+          )}
 
           {/* Share Button */}
           <button
