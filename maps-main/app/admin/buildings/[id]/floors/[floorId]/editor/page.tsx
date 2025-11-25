@@ -392,7 +392,7 @@ function AddPointForm({
               className="w-full px-3 py-2 border border-gray-300 rounded-lg"
             >
               <option value="">-- None --</option>
-              {floor.Building.floors
+              {(floor.Building.floors || [])
                 .filter(f => f.id !== floor.id)
                 .map(f => (
                   <option key={f.id} value={f.id}>{f.name}</option>

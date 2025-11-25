@@ -21,6 +21,15 @@ export async function GET(
                 name: true,
               },
             },
+            floors: {
+              select: {
+                id: true,
+                name: true,
+              },
+              orderBy: {
+                floorNumber: 'asc',
+              },
+            },
           },
         },
       },
