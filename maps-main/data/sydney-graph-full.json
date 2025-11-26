@@ -620,7 +620,7 @@
       "id": "n_378_732",
       "x": 378.12,
       "y": 731.65,
-      "street": "martin_place",
+      "street": "martin place",
       "lat": -33.86755947370054,
       "lng": 151.20770024564993
     },
@@ -628,7 +628,7 @@
       "id": "n_391_733",
       "x": 391.31,
       "y": 733.14,
-      "street": "martin_place",
+      "street": "martin place",
       "lat": -33.86759076326668,
       "lng": 151.20803093489616
     },
@@ -636,9 +636,89 @@
       "id": "n_383_561",
       "x": 382.71,
       "y": 561.48,
-      "street": "abercrombie_lane",
+      "street": "abercrombie lane",
       "lat": -33.86414239049418,
       "lng": 151.2077547864682
+    },
+    "n_524_523": {
+      "id": "n_524_523",
+      "x": 524.36,
+      "y": 522.9,
+      "street": "bridge st",
+      "lat": -33.86338224597589,
+      "lng": 151.21128676549114
+    },
+    "n_541_522": {
+      "id": "n_541_522",
+      "x": 541.11,
+      "y": 521.92,
+      "street": "bridge st",
+      "lat": -33.863364298610264,
+      "lng": 151.2117056896094
+    },
+    "n_519_583": {
+      "id": "n_519_583",
+      "x": 519.16,
+      "y": 583,
+      "street": "york st",
+      "lat": -33.864588708024,
+      "lng": 151.21117791847686
+    },
+    "n_463_570": {
+      "id": "n_463_570",
+      "x": 462.86,
+      "y": 569.5,
+      "street": "bent st",
+      "lat": -33.86431175591354,
+      "lng": 151.209763877117
+    },
+    "n_494_565": {
+      "id": "n_494_565",
+      "x": 493.56,
+      "y": 565.24,
+      "street": "bent st",
+      "lat": -33.8642293799271,
+      "lng": 151.2105308224336
+    },
+    "n_460_570": {
+      "id": "n_460_570",
+      "x": 460.36,
+      "y": 570.25,
+      "street": "spring st",
+      "lat": -33.864326559483125,
+      "lng": 151.20970156524731
+    },
+    "n_442_585": {
+      "id": "n_442_585",
+      "x": 441.88,
+      "y": 585.27,
+      "street": "spring st",
+      "lat": -33.86462629588813,
+      "lng": 151.20924431664494
+    },
+    "n_430_598": {
+      "id": "n_430_598",
+      "x": 429.51,
+      "y": 598.25,
+      "street": "spring st",
+      "lat": -33.86488569514634,
+      "lng": 151.20893928483795
+    },
+    "n_427_616": {
+      "id": "n_427_616",
+      "x": 427.46,
+      "y": 615.9,
+      "street": "pitt st",
+      "lat": -33.86523995141315,
+      "lng": 151.2088942307025
+    },
+    "n_408_614": {
+      "id": "n_408_614",
+      "x": 407.86,
+      "y": 613.8,
+      "street": "curtin st",
+      "lat": -33.8651957474497,
+      "lng": 151.20840287547384
     },
     "n_355_1072": {
       "id": "n_355_1072",
@@ -656,11 +736,19 @@
       "lat": -33.87482543492557,
       "lng": 151.20706616540002
     },
+    "n_503_570": {
+      "id": "n_503_570",
+      "x": 502.98,
+      "y": 569.7,
+      "street": "bent st",
+      "lat": -33.864319926283976,
+      "lng": 151.21076819759625
+    },
     "n_376_611": {
       "id": "n_376_611",
       "x": 376.21,
       "y": 611.29,
-      "street": "curtin place",
+      "street": "curtin st",
       "lat": -33.86514206180508,
       "lng": 151.2076097495351
     },
@@ -668,7 +756,7 @@
       "id": "n_389_611",
       "x": 389.46,
       "y": 610.9,
-      "street": "curtin place",
+      "street": "curtin st",
       "lat": -33.86513560116412,
       "lng": 151.20794127389314
     },
@@ -738,11 +826,19 @@
     },
     "door_Australia_x5F_Square_x5F_door2": {
       "id": "door_Australia_x5F_Square_x5F_door2",
-      "x": 375.21000000000004,
-      "y": 612.005,
+      "x": 375.385,
+      "y": 611.995,
       "street": "Australia_Square entrance",
-      "lat": -33.86515631776159,
-      "lng": 151.20758497197025
+      "lat": -33.86515613504778,
+      "lng": 151.20758934887408
+    },
+    "door_musem_of_sydney": {
+      "id": "door_musem_of_sydney",
+      "x": 536.585,
+      "y": 524.71,
+      "street": "musem_of_sydney entrance",
+      "lat": -33.86341986225755,
+      "lng": 151.21159341317272
     }
   },
   "adjacency": {
@@ -1346,7 +1442,7 @@
       {
         "to": "n_378_732",
         "distance": 16.60248776539226,
-        "street": "martin_place"
+        "street": "martin place"
       }
     ],
     "n_362_654": [
@@ -1425,7 +1521,7 @@
       {
         "to": "n_376_611",
         "distance": 3.7638411231081417,
-        "street": "curtin place"
+        "street": "curtin st"
       }
     ],
     "n_377_562": [
@@ -1447,7 +1543,7 @@
       {
         "to": "n_383_561",
         "distance": 4.675179140952743,
-        "street": "abercrombie_lane"
+        "street": "abercrombie lane"
       }
     ],
     "n_379_540": [
@@ -1804,19 +1900,19 @@
       {
         "to": "n_362_730",
         "distance": 16.60248776539226,
-        "street": "martin_place"
+        "street": "martin place"
       },
       {
         "to": "n_391_733",
         "distance": 13.27389166748019,
-        "street": "martin_place"
+        "street": "martin place"
       }
     ],
     "n_391_733": [
       {
         "to": "n_378_732",
         "distance": 13.27389166748019,
-        "street": "martin_place"
+        "street": "martin place"
       },
       {
         "to": "door_martin_place",
@@ -1828,12 +1924,132 @@
       {
         "to": "n_377_562",
         "distance": 4.675179140952743,
-        "street": "abercrombie_lane"
+        "street": "abercrombie lane"
       },
       {
         "to": "door_",
         "distance": 0.5799999999999272,
         "street": " entrance"
+      }
+    ],
+    "n_524_523": [
+      {
+        "to": "n_541_522",
+        "distance": 16.778644164532487,
+        "street": "bridge st"
+      },
+      {
+        "to": "n_519_583",
+        "distance": 60.324538953895065,
+        "street": "york st"
+      }
+    ],
+    "n_541_522": [
+      {
+        "to": "n_524_523",
+        "distance": 16.778644164532487,
+        "street": "bridge st"
+      },
+      {
+        "to": "door_musem_of_sydney",
+        "distance": 5.3159876786915365,
+        "street": "musem_of_sydney entrance"
+      }
+    ],
+    "n_519_583": [
+      {
+        "to": "n_524_523",
+        "distance": 60.324538953895065,
+        "street": "york st"
+      },
+      {
+        "to": "n_503_570",
+        "distance": 19.875927651307265,
+        "street": "bent st"
+      }
+    ],
+    "n_463_570": [
+      {
+        "to": "n_494_565",
+        "distance": 30.994154287542663,
+        "street": "bent st"
+      },
+      {
+        "to": "n_460_570",
+        "distance": 2.6100766272276377,
+        "street": "spring st"
+      }
+    ],
+    "n_494_565": [
+      {
+        "to": "n_463_570",
+        "distance": 30.994154287542663,
+        "street": "bent st"
+      },
+      {
+        "to": "n_503_570",
+        "distance": 10.422475713572117,
+        "street": "bent st"
+      }
+    ],
+    "n_460_570": [
+      {
+        "to": "n_463_570",
+        "distance": 2.6100766272276377,
+        "street": "spring st"
+      },
+      {
+        "to": "n_442_585",
+        "distance": 23.81408826724215,
+        "street": "spring st"
+      }
+    ],
+    "n_442_585": [
+      {
+        "to": "n_460_570",
+        "distance": 23.81408826724215,
+        "street": "spring st"
+      },
+      {
+        "to": "n_430_598",
+        "distance": 17.930345785845866,
+        "street": "spring st"
+      }
+    ],
+    "n_430_598": [
+      {
+        "to": "n_442_585",
+        "distance": 17.930345785845866,
+        "street": "spring st"
+      },
+      {
+        "to": "n_427_616",
+        "distance": 17.768652171732082,
+        "street": "pitt st"
+      }
+    ],
+    "n_427_616": [
+      {
+        "to": "n_430_598",
+        "distance": 17.768652171732082,
+        "street": "pitt st"
+      },
+      {
+        "to": "n_408_614",
+        "distance": 19.71217897646018,
+        "street": "curtin st"
+      }
+    ],
+    "n_408_614": [
+      {
+        "to": "n_427_616",
+        "distance": 19.71217897646018,
+        "street": "curtin st"
+      },
+      {
+        "to": "n_389_611",
+        "distance": 17.421733553237456,
+        "street": "curtin st"
       }
     ],
     "n_355_1072": [
@@ -1860,20 +2076,42 @@
         "street": "George St"
       }
     ],
+    "n_503_570": [
+      {
+        "to": "n_494_565",
+        "distance": 10.422475713572117,
+        "street": "bent st"
+      },
+      {
+        "to": "n_503_570",
+        "distance": 1.069626102897558,
+        "street": "bent st"
+      },
+      {
+        "to": "n_503_570",
+        "distance": 1.069626102897558,
+        "street": "bent st"
+      },
+      {
+        "to": "n_519_583",
+        "distance": 19.875927651307265,
+        "street": "bent st"
+      }
+    ],
     "n_376_611": [
       {
         "to": "n_372_611",
         "distance": 3.7638411231081417,
-        "street": "curtin place"
+        "street": "curtin st"
       },
       {
         "to": "n_389_611",
         "distance": 13.25573838003753,
-        "street": "curtin place"
+        "street": "curtin st"
       },
       {
         "to": "door_Australia_x5F_Square_x5F_door2",
-        "distance": 1.2293189171244099,
+        "distance": 1.0851958348611732,
         "street": "Australia_Square entrance"
       }
     ],
@@ -1881,7 +2119,22 @@
       {
         "to": "n_376_611",
         "distance": 13.25573838003753,
-        "street": "curtin place"
+        "street": "curtin st"
+      },
+      {
+        "to": "n_389_611",
+        "distance": 1.485530208376811,
+        "street": "curtin st"
+      },
+      {
+        "to": "n_389_611",
+        "distance": 1.485530208376811,
+        "street": "curtin st"
+      },
+      {
+        "to": "n_408_614",
+        "distance": 17.421733553237456,
+        "street": "curtin st"
       },
       {
         "to": "door_Australia_x5F_Square_x5F_door1",
@@ -1948,8 +2201,15 @@
     "door_Australia_x5F_Square_x5F_door2": [
       {
         "to": "n_376_611",
-        "distance": 1.2293189171244099,
+        "distance": 1.0851958348611732,
         "street": "Australia_Square entrance"
+      }
+    ],
+    "door_musem_of_sydney": [
+      {
+        "to": "n_541_522",
+        "distance": 5.3159876786915365,
+        "street": "musem_of_sydney entrance"
       }
     ]
   }

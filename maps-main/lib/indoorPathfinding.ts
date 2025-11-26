@@ -359,7 +359,7 @@ function parsePortals(svgContent: string, floorId: string): Portal[] {
 /**
  * Build multi-floor navigation graph with portal-based connections
  */
-function buildMultiFloorGraph(
+export function buildMultiFloorGraph(
   floorData: Array<{ floorId: string; segments: PathSegment[]; svgContent: string }>
 ): Map<string, GraphNode> {
   const nodes = new Map<string, GraphNode>();

@@ -52,6 +52,7 @@ import IndoorPOIModal from '@/components/Location/IndoorPOIModal';
 import { validateGraph, logValidationResult } from '@/lib/graphValidator';
 
 import { findPathBetweenPOIs, findMultiFloorPath } from '@/lib/indoorPathfinding';
+import { buildHybridGraph, findHybridRoute } from '@/lib/hybridPathfinding';
 
 
 
@@ -342,6 +343,11 @@ export default function Page() {
   const [currentFloorSvgContent, setCurrentFloorSvgContent] = useState<string>('');
   const [allFloorSvgContent, setAllFloorSvgContent] = useState<Map<string, string>>(new Map());
 
+  // Hybrid navigation state
+  const [buildingEntrances, setBuildingEntrances] = useState<any[]>([]);
+  const [hybridRouteActive, setHybridRouteActive] = useState(false);
+  const [hybridGraph, setHybridGraph] = useState<Map<string, any> | null>(null);
+
   const [debugTransformLogTick, setDebugTransformLogTick] = useState(0);
 
   const [showOutOfArea, setShowOutOfArea] = useState(false);
@@ -584,6 +590,133 @@ export default function Page() {
     });
   }, [indoorModeActive, buildingData]);
 
+  // Load building entrances for hybrid navigation
+  useEffect(() => {
+    async function loadBuildingEntrances() {
+      try {
+        const res = await fetch('/api/buildings/entrances');
+        const data = await res.json();
+        setBuildingEntrances(data.entrances || []);
+        console.log(`🚪 Loaded ${data.entrances?.length || 0} building entrances for hybrid navigation`);
+      } catch (error) {
+        console.error('Failed to load building entrances:', error);
+      }
+    }
+    loadBuildingEntrances();
+  }, []);
+
+  // Build hybrid graph when outdoor graph, building entrances, and indoor SVG are ready
+  useEffect(() => {
+    if (!pathGraph || buildingEntrances.length === 0 || allFloorSvgContent.size === 0) {
+      // Wait for all components to be loaded
+      console.log('⏳ Waiting for hybrid graph components:', {
+        pathGraph: !!pathGraph,
+        entrances: buildingEntrances.length,
+        floorSvg: allFloorSvgContent.size
+      });
+      return;
+    }
+
+    async function buildHybrid() {
+      try {
+        if (!pathGraph) {
+          console.error('pathGraph is null in buildHybrid');
+          return;
+        }
+
+        console.log('🔧 Building hybrid navigation graph...');
+        console.log('  - Outdoor graph:', Object.keys(pathGraph.nodesById).length, 'nodes');
+        console.log('  - Building entrances:', buildingEntrances.length);
+        console.log('  - Indoor floors:', allFloorSvgContent.size);
+
+        // Convert outdoor graph to Map format expected by buildHybridGraph
+        // The outdoor graph uses adjacency list format, need to convert to edges Map
+        const outdoorGraphMap = new Map();
+        Object.entries(pathGraph.nodesById).forEach(([id, node]) => {
+          const edges = new Map();
+          // Convert adjacency list to edges Map
+          const adjacentEdges = pathGraph!.adjacency[id] || [];
+          adjacentEdges.forEach((edge: any) => {
+            // Edge property is 'to', not 'target'
+            edges.set(edge.to, edge.distance);
+          });
+
+          outdoorGraphMap.set(id, {
+            ...node,
+            edges,
+          });
+        });
+
+        // Build indoor graphs for each floor with SVG content
+        const indoorGraphs = new Map();
+
+        // Group SVG content by building
+        const buildingFloors = new Map<string, Array<{floorId: string; svgContent: string}>>();
+
+        // Get building info from entrances
+        const buildingIds = [...new Set(buildingEntrances.map(e => e.buildingId))];
+
+        for (const buildingId of buildingIds) {
+          const floors: Array<{floorId: string; svgContent: string}> = [];
+
+          // Find all floors for this building from entrances
+          const buildingEntranceFloors = buildingEntrances
+            .filter(e => e.buildingId === buildingId)
+            .map(e => e.floorId);
+
+          for (const floorId of new Set(buildingEntranceFloors)) {
+            const svgContent = allFloorSvgContent.get(floorId);
+            if (svgContent) {
+              floors.push({ floorId, svgContent });
+            }
+          }
+
+          if (floors.length > 0) {
+            buildingFloors.set(buildingId, floors);
+          }
+        }
+
+        console.log('  - Building indoor graphs for', buildingFloors.size, 'buildings...');
+
+        // Build indoor graph for each building using multi-floor pathfinding
+        for (const [buildingId, floors] of buildingFloors.entries()) {
+          try {
+            // Parse SVG paths for each floor
+            const { parseSvgPaths, buildMultiFloorGraph } = await import('@/lib/indoorPathfinding');
+
+            const floorData = floors.map(floor => {
+              const segments = parseSvgPaths(floor.svgContent);
+              return {
+                floorId: floor.floorId,
+                segments,
+                svgContent: floor.svgContent
+              };
+            });
+
+            const indoorGraph = buildMultiFloorGraph(floorData);
+            indoorGraphs.set(buildingId, indoorGraph);
+            console.log(`    ✓ Built indoor graph for building ${buildingId}:`, indoorGraph.size, 'nodes');
+          } catch (error) {
+            console.error(`    ✗ Failed to build indoor graph for building ${buildingId}:`, error);
+          }
+        }
+
+        const hybrid = await buildHybridGraph(
+          outdoorGraphMap,
+          buildingEntrances,
+          indoorGraphs
+        );
+
+        setHybridGraph(hybrid);
+        console.log('✅ Hybrid graph built:', hybrid.size, 'total nodes (outdoor + indoor + entrance portals)');
+      } catch (error) {
+        console.error('❌ Failed to build hybrid graph:', error);
+      }
+    }
+
+    buildHybrid();
+  }, [pathGraph, buildingEntrances, allFloorSvgContent]);
+
   // Update current floor SVG when selected floor changes
   useEffect(() => {
     if (!selectedFloorId) {
@@ -593,6 +726,66 @@ export default function Page() {
     const content = allFloorSvgContent.get(selectedFloorId) || '';
     setCurrentFloorSvgContent(content);
   }, [selectedFloorId, allFloorSvgContent]);
+
+  // HYBRID NAVIGATION DETECTION: Check for outdoor ↔ indoor routes
+  useEffect(() => {
+    // Detect hybrid scenario: outdoor start + indoor destination OR indoor start + outdoor destination
+    const hasOutdoorStart = navigationStart && !indoorNavigationStart;
+    const hasIndoorDestination = indoorNavigationDestination && !navigationDestination;
+    const hasIndoorStart = indoorNavigationStart && !navigationStart;
+    const hasOutdoorDestination = navigationDestination && !indoorNavigationDestination;
+
+    if ((hasOutdoorStart && hasIndoorDestination) || (hasIndoorStart && hasOutdoorDestination)) {
+      console.log('🔀 HYBRID NAVIGATION DETECTED!');
+      console.log('  Start:', hasOutdoorStart ? `Outdoor (${navigationStart?.name})` : `Indoor (${indoorNavigationStart?.name})`);
+      console.log('  Destination:', hasIndoorDestination ? `Indoor (${indoorNavigationDestination?.name})` : `Outdoor (${navigationDestination?.name})`);
+
+      // Trigger hybrid pathfinding
+      if (hybridGraph) {
+        async function calculateHybridRoute() {
+          try {
+            if (!hybridGraph) {
+              console.error('hybridGraph is null');
+              return;
+            }
+
+            const start = hasOutdoorStart
+              ? { lat: navigationStart!.lat, lng: navigationStart!.lng }
+              : { buildingId: indoorNavigationStart!.buildingId, floorId: indoorNavigationStart!.floorId, x: indoorNavigationStart!.x, y: indoorNavigationStart!.y };
+
+            const end = hasIndoorDestination
+              ? { buildingId: indoorNavigationDestination!.buildingId, floorId: indoorNavigationDestination!.floorId, x: indoorNavigationDestination!.x, y: indoorNavigationDestination!.y }
+              : { lat: navigationDestination!.lat, lng: navigationDestination!.lng };
+
+            console.log('🚀 Calling findHybridRoute...', { start, end });
+            const hybridRoute = await findHybridRoute(hybridGraph, start, end);
+
+            if (hybridRoute) {
+              console.log('✅ Hybrid route found!', hybridRoute);
+              setHybridRouteActive(true);
+              // TODO: Convert hybrid route to displayable format
+              // For now, just log the segments
+              hybridRoute.segments.forEach((seg, i) => {
+                console.log(`  Segment ${i + 1}: ${seg.type} (${seg.nodes.length} nodes, ${seg.distance.toFixed(1)}m)`);
+              });
+            } else {
+              console.error('❌ No hybrid route found');
+              setNavigationErrorMessage('Could not find a route between outdoor and indoor locations.');
+              setShowNavigationError(true);
+            }
+          } catch (error) {
+            console.error('❌ Hybrid pathfinding error:', error);
+            setNavigationErrorMessage('Error calculating hybrid route: ' + error);
+            setShowNavigationError(true);
+          }
+        }
+
+        calculateHybridRoute();
+      } else {
+        console.warn('⚠️ Hybrid graph not ready yet');
+      }
+    }
+  }, [navigationStart, navigationDestination, indoorNavigationStart, indoorNavigationDestination, hybridGraph]);
 
   // Calculate indoor route when start and destination are set
   useEffect(() => {

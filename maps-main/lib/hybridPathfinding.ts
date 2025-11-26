@@ -111,10 +111,10 @@ export async function buildHybridGraph(
       gps: { lat: node.lat, lng: node.lng },
       type: 'outdoor',
       edges: new Map(
-        Array.from(node.edges.entries()).map(([targetId, dist]) => [
+        (Array.from(node.edges.entries()) as [string, number][]).map(([targetId, dist]) => [
           `outdoor-${targetId}`,
           dist
-        ])
+        ] as [string, number])
       ),
     });
     outdoorCount++;
@@ -133,10 +133,10 @@ export async function buildHybridGraph(
         buildingId,
         floorId: node.floorId,
         edges: new Map(
-          Array.from(node.edges.entries()).map(([targetId, dist]) => [
+          (Array.from(node.edges.entries()) as [string, number][]).map(([targetId, dist]) => [
             `indoor-${buildingId}-${targetId}`,
             dist
-          ])
+          ] as [string, number])
         ),
       });
       indoorCount++;

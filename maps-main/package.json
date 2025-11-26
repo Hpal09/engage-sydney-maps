@@ -11,6 +11,7 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
+    "postinstall": "prisma generate",
     "build:graph": "ts-node scripts/buildGraph.ts",
     "db:check": "ts-node scripts/check-db.ts",
     "db:seed": "ts-node --project prisma/tsconfig.json prisma/seed.ts",

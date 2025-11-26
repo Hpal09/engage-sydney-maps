@@ -1,23 +1,12 @@
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
+import { cleanupExpiredSessions } from "@/lib/sessionCleanup";
 
 /**
- * Simple in-memory session store for MVP
- * WARNING: This is for development only!
- * In production, use a proper session store (Redis, database, etc.)
+ * Database-backed session store
+ * Works seamlessly on serverless (Vercel) and local environments
  */
-const sessions = new Map<string, { userId: string; email: string; expiresAt: number }>();
-
-// Clean up expired sessions every hour
-setInterval(() => {
-  const now = Date.now();
-  for (const [token, session] of sessions.entries()) {
-    if (session.expiresAt < now) {
-      sessions.delete(token);
-    }
-  }
-}, 60 * 60 * 1000);
 
 /**
  * Generate a random session token
@@ -33,9 +22,16 @@ function generateToken(): string {
  */
 export async function createSession(userId: string, email: string) {
   const token = generateToken();
-  const expiresAt = Date.now() + 7 * 24 * 60 * 60 * 1000; // 7 days
+  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
 
-  sessions.set(token, { userId, email, expiresAt });
+  // Store session in database
+  await prisma.session.create({
+    data: {
+      userId,
+      token,
+      expiresAt,
+    },
+  });
 
   // Set HTTP-only cookie
   cookies().set("admin_session", token, {
@@ -44,6 +40,11 @@ export async function createSession(userId: string, email: string) {
     sameSite: "lax",
     maxAge: 7 * 24 * 60 * 60, // 7 days
     path: "/",
+  });
+
+  // Opportunistically clean up expired sessions (fire and forget)
+  cleanupExpiredSessions().catch(() => {
+    // Ignore errors - cleanup is best effort
   });
 
   return token;
@@ -59,19 +60,30 @@ export async function getSession() {
     return null;
   }
 
-  const session = sessions.get(token);
+  // Query session from database
+  const session = await prisma.session.findUnique({
+    where: { token },
+    include: { user: true },
+  });
 
   if (!session) {
     return null;
   }
 
   // Check if session is expired
-  if (session.expiresAt < Date.now()) {
-    sessions.delete(token);
+  if (session.expiresAt < new Date()) {
+    // Delete expired session
+    await prisma.session.delete({
+      where: { id: session.id },
+    });
     return null;
   }
 
-  return session;
+  return {
+    userId: session.userId,
+    email: session.user.email,
+    expiresAt: session.expiresAt.getTime(),
+  };
 }
 
 /**
@@ -81,7 +93,10 @@ export async function deleteSession() {
   const token = cookies().get("admin_session")?.value;
 
   if (token) {
-    sessions.delete(token);
+    // Delete session from database
+    await prisma.session.deleteMany({
+      where: { token },
+    });
   }
 
   cookies().delete("admin_session");

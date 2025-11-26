@@ -464,7 +464,7 @@ export default function CustomSydneyMap({ businesses, selectedBusiness, userLoca
           try {
             const state = (ref as ReactZoomPanPinchRef & { state?: TransformState })?.state;
             lastScaleRef.current = state?.scale ?? 1;
-            maybeLogTransform('onInit', state);
+            maybeLogTransform('onInit', state as unknown as Record<string, unknown>);
           } catch {
             maybeLogTransform('onInit');
           }
@@ -473,7 +473,7 @@ export default function CustomSydneyMap({ businesses, selectedBusiness, userLoca
           try {
             const state = (ref as ReactZoomPanPinchRef & { state?: TransformState })?.state;
             lastScaleRef.current = state?.scale ?? lastScaleRef.current;
-            maybeLogTransform('onTransformed', state);
+            maybeLogTransform('onTransformed', state as unknown as Record<string, unknown>);
           } catch {
             maybeLogTransform('onTransformed');
           }
@@ -482,7 +482,7 @@ export default function CustomSydneyMap({ businesses, selectedBusiness, userLoca
           try {
             const state = (ref as ReactZoomPanPinchRef & { state?: TransformState })?.state;
             lastScaleRef.current = state?.scale ?? lastScaleRef.current;
-            maybeLogTransform('onZoomStop', state);
+            maybeLogTransform('onZoomStop', state as unknown as Record<string, unknown>);
           } catch {
             maybeLogTransform('onZoomStop');
           }

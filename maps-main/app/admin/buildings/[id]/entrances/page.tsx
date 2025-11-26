@@ -296,7 +296,7 @@ export default function BuildingEntrancesPage() {
               {entrances.length === 0 && (
                 <tr>
                   <td colSpan={6} className="p-8 text-center text-gray-500">
-                    No entrances yet. Click "Add New Entrance" to create one.
+                    No entrances yet. Click &quot;Add New Entrance&quot; to create one.
                   </td>
                 </tr>
               )}
