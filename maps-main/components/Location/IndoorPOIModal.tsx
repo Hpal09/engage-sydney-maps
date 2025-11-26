@@ -69,8 +69,16 @@ export default function IndoorPOIModal({ poi, onClose, onSetStart, onSetDestinat
 
 
   return (
-    <div className="pointer-events-auto fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-0">
-      <div className="w-full max-w-2xl rounded-t-3xl bg-white shadow-2xl flex flex-col" style={{ maxHeight: '90vh' }}>
+    <div
+      className="pointer-events-auto fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-0"
+      onClick={onClose}
+      style={{ touchAction: 'none' }}
+    >
+      <div
+        className="w-full max-w-2xl rounded-t-3xl bg-white shadow-2xl flex flex-col"
+        style={{ maxHeight: '90vh', touchAction: 'auto' }}
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Handle bar */}
         <div className="flex justify-center pt-3 flex-shrink-0">
           <div className="h-1 w-12 rounded-full bg-gray-300"></div>
@@ -89,9 +97,13 @@ export default function IndoorPOIModal({ poi, onClose, onSetStart, onSetDestinat
             </div>
           </div>
           <button
-            onClick={onClose}
-            className="rounded-full bg-gray-100 p-2 hover:bg-gray-200"
+            onClick={(e) => {
+              e.stopPropagation();
+              onClose();
+            }}
+            className="rounded-full bg-gray-100 p-2 hover:bg-gray-200 active:bg-gray-300"
             aria-label="Close"
+            style={{ touchAction: 'manipulation' }}
           >
             <X className="h-5 w-5" />
           </button>
@@ -101,12 +113,14 @@ export default function IndoorPOIModal({ poi, onClose, onSetStart, onSetDestinat
         <div className="space-y-3 px-5 pb-4 flex-shrink-0">
           {/* Primary Action: Take me there */}
           <button
-            onClick={() => {
+            onClick={(e) => {
+              e.stopPropagation();
               if (onTakeMeThere) {
                 onTakeMeThere();
               }
             }}
-            className="w-full rounded-full bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4 font-semibold text-white shadow-lg hover:from-blue-700 hover:to-blue-800"
+            className="w-full rounded-full bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4 font-semibold text-white shadow-lg hover:from-blue-700 hover:to-blue-800 active:from-blue-800 active:to-blue-900"
+            style={{ touchAction: 'manipulation' }}
           >
             <div className="flex items-center justify-center gap-2">
               <MapPin className="h-5 w-5" />
@@ -117,12 +131,14 @@ export default function IndoorPOIModal({ poi, onClose, onSetStart, onSetDestinat
           {/* Secondary Actions */}
           <div className="flex gap-3">
             <button
-              onClick={() => {
+              onClick={(e) => {
+                e.stopPropagation();
                 if (onSetStart) {
                   onSetStart();
                 }
               }}
-              className="flex-1 rounded-full border-2 border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              className="flex-1 rounded-full border-2 border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 active:bg-gray-100"
+              style={{ touchAction: 'manipulation' }}
             >
               <div className="flex items-center justify-center gap-2">
                 <div className="h-2.5 w-2.5 rounded-full border-2 border-blue-500"></div>
@@ -130,12 +146,14 @@ export default function IndoorPOIModal({ poi, onClose, onSetStart, onSetDestinat
               </div>
             </button>
             <button
-              onClick={() => {
+              onClick={(e) => {
+                e.stopPropagation();
                 if (onSetDestination) {
                   onSetDestination();
                 }
               }}
-              className="flex-1 rounded-full border-2 border-blue-600 bg-white px-4 py-2.5 text-sm font-medium text-blue-600 hover:bg-blue-50"
+              className="flex-1 rounded-full border-2 border-blue-600 bg-white px-4 py-2.5 text-sm font-medium text-blue-600 hover:bg-blue-50 active:bg-blue-100"
+              style={{ touchAction: 'manipulation' }}
             >
               <div className="flex items-center justify-center gap-2">
                 <MapPin className="h-4 w-4" />
@@ -253,20 +271,28 @@ export default function IndoorPOIModal({ poi, onClose, onSetStart, onSetDestinat
           {/* Action Buttons: Feedback & Share */}
           <div className="flex gap-3">
             <button
-              onClick={() => setShowFeedback(true)}
-              className="flex-1 flex items-center justify-center gap-2 rounded-full py-3 font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 transition-all"
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowFeedback(true);
+              }}
+              className="flex-1 flex items-center justify-center gap-2 rounded-full py-3 font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 active:bg-gray-300 transition-all"
+              style={{ touchAction: 'manipulation' }}
             >
               <MessageSquare className="h-4 w-4" />
               Feedback
             </button>
 
             <button
-              onClick={handleShare}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleShare();
+              }}
               className={`flex-1 flex items-center justify-center gap-2 rounded-full py-3 font-medium transition-all ${
                 shareStatus === 'idle'
-                  ? 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  ? 'bg-gray-100 text-gray-700 hover:bg-gray-200 active:bg-gray-300'
                   : 'bg-green-100 text-green-700'
               }`}
+              style={{ touchAction: 'manipulation' }}
             >
               {shareStatus === 'idle' ? (
                 <>
