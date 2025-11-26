@@ -82,22 +82,26 @@ export const CONTROL_POINTS: ReadonlyArray<ControlPoint> = Object.freeze([
  *
  * These define the geographic area covered by the map SVG.
  * Used as fallback when calibrated transformation is not available.
+ *
+ * EXPANDED BOUNDS: Added ~100m buffer on all sides to account for GPS drift (5-50m accuracy)
+ * This prevents "outside map area" messages from normal GPS inaccuracy
  */
 export const GPS_CORNERS = Object.freeze({
-  topLeft: { lat: -33.85721, lng: 151.20121 },      // Barangaroo / The Rocks NW tip
-  topRight: { lat: -33.85794, lng: 151.21008 },     // Overseas Passenger Terminal
-  bottomRight: { lat: -33.88317, lng: 151.20695 },  // Haymarket / Central
-  bottomLeft: { lat: -33.8757, lng: 151.20172 },    // Darling Square / Tumbalong Park
+  topLeft: { lat: -33.8560, lng: 151.1995 },      // Expanded NW (was -33.85721, 151.20121)
+  topRight: { lat: -33.8560, lng: 151.2115 },     // Expanded NE (was -33.85794, 151.21008)
+  bottomRight: { lat: -33.8845, lng: 151.2115 },  // Expanded SE (was -33.88317, 151.20695)
+  bottomLeft: { lat: -33.8845, lng: 151.1995 },   // Expanded SW (was -33.8757, 151.20172)
 });
 
 /**
  * Expanded bounding box for wider Sydney area coverage
+ * Aligned with GPS_CORNERS expansion for consistency
  */
 export const SYD_CBD_BBOX = Object.freeze({
-  latMin: -33.90,     // Expanded south
-  latMax: -33.855,    // Expanded north
-  lngMin: 151.18,     // Expanded west
-  lngMax: 151.215,    // Expanded east
+  latMin: -33.8850,   // Aligned with expanded south boundary
+  latMax: -33.8555,   // Aligned with expanded north boundary
+  lngMin: 151.1990,   // Aligned with expanded west boundary
+  lngMax: 151.2120,   // Aligned with expanded east boundary
 });
 
 /**
