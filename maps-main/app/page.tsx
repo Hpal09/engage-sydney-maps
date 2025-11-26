@@ -1153,13 +1153,13 @@ export default function Page() {
 
         // GPS FILTERING: Reject low-accuracy readings to prevent jumps
 
-        // For walking navigation, we need good accuracy to detect wrong turns
+        // RELAXED: Allow lower accuracy for better reliability, especially during initial GPS acquisition
 
-        const MAX_ACCURACY = 50; // meters - tighter for walking to detect wrong turns
+        const MAX_ACCURACY = 100; // meters - relaxed from 50m to allow GPS to work in urban/indoor environments
 
         if (!simulateAtQvb && fresh.accuracy && fresh.accuracy > MAX_ACCURACY) {
 
-          console.warn('⚠️ GPS accuracy too low, ignoring:', fresh.accuracy.toFixed(1) + 'm');
+          console.warn('⚠️ GPS accuracy too low, ignoring:', fresh.accuracy.toFixed(1) + 'm (max: ' + MAX_ACCURACY + 'm)');
 
           return;
 
@@ -1169,7 +1169,7 @@ export default function Page() {
 
         // GPS FILTERING: Reject unrealistic position jumps (teleportation detection)
 
-        // Tuned for WALKING speeds only
+        // RELAXED: Account for GPS update delays (maximumAge: 3000ms) and allow faster movement
 
         if (lastShownRef.current && !simulateAtQvb) {
 
@@ -1183,13 +1183,13 @@ export default function Page() {
 
           const timeDelta = ((fresh.timestamp || 0) - (lastShownRef.current.timestamp || 0)) / 1000; // seconds
 
-          const MAX_WALKING_SPEED = 4; // m/s (~14 km/h) - fast running pace, allows for brief sprints
+          const MAX_WALKING_SPEED = 8; // m/s (~29 km/h) - relaxed to account for GPS caching delays and running
 
 
 
           if (timeDelta > 0 && distanceFromLast / timeDelta > MAX_WALKING_SPEED) {
 
-            console.warn('⚠️ GPS jump detected (too fast for walking), ignoring:', {
+            console.warn('⚠️ GPS jump detected (too fast), ignoring:', {
 
               distance: distanceFromLast.toFixed(1) + 'm',
 
@@ -1212,6 +1212,22 @@ export default function Page() {
         setRawLocation(fresh);
 
         let shown = simulateAtQvb ? createMockQvbLocation() : fresh;
+
+
+
+        // Log successful GPS acquisition for debugging
+
+        console.log('✅ GPS location accepted:', {
+
+          lat: fresh.lat.toFixed(6),
+
+          lng: fresh.lng.toFixed(6),
+
+          accuracy: fresh.accuracy ? fresh.accuracy.toFixed(1) + 'm' : 'unknown',
+
+          heading: fresh.heading !== null && fresh.heading !== undefined ? fresh.heading.toFixed(1) + '°' : 'none'
+
+        });
 
 
 
