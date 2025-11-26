@@ -1421,9 +1421,16 @@ export default function Page() {
             if (turnByTurnActive && navigationStart && navigationStart.id !== 'my-location') {
               const startPoint = activeRoute[0];
               const nextPoint = activeRoute[1];
-              const dx = nextPoint.x - startPoint.x;
-              const dy = nextPoint.y - startPoint.y;
-              const angleDeg = (Math.atan2(dy, dx) * 180) / Math.PI;
+
+              // Use device heading if available, otherwise use route direction
+              let angleDeg: number;
+              if (typeof shown.heading === 'number' && !Number.isNaN(shown.heading)) {
+                angleDeg = shown.heading - 90; // Convert GPS heading to SVG rotation
+              } else {
+                const dx = nextPoint.x - startPoint.x;
+                const dy = nextPoint.y - startPoint.y;
+                angleDeg = (Math.atan2(dy, dx) * 180) / Math.PI;
+              }
 
               const marker = { x: startPoint.x, y: startPoint.y, angleDeg };
               navMarkerRef.current = marker;
@@ -1531,11 +1538,31 @@ export default function Page() {
 
 
 
-            // Calculate angle based on segment direction
+            // Calculate angle: Use device heading if available, otherwise use route direction
 
-            const angleRad = Math.atan2(aby, abx);
+            let angleDeg: number;
 
-            const angleDeg = (angleRad * 180) / Math.PI;
+            if (typeof shown.heading === 'number' && !Number.isNaN(shown.heading)) {
+
+              // Use actual device heading (compass direction)
+
+              // GPS heading is 0° = North, 90° = East, 180° = South, 270° = West
+
+              // SVG rotation: 0° = East, 90° = South, 180° = West, 270° = North
+
+              // Convert GPS heading to SVG rotation: subtract 90° to align North with upward
+
+              angleDeg = shown.heading - 90;
+
+            } else {
+
+              // Fallback: Use route segment direction when heading unavailable (stationary)
+
+              const angleRad = Math.atan2(aby, abx);
+
+              angleDeg = (angleRad * 180) / Math.PI;
+
+            }
 
 
 
