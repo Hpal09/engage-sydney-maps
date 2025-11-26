@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Building2, Plus, Edit, Trash2 } from 'lucide-react';
+import { Building2, Plus, Edit, Trash2, DoorOpen } from 'lucide-react';
 
 type Building = {
   id: string;
@@ -141,6 +141,13 @@ export default function BuildingsPage() {
                   </div>
                 </div>
                 <div className="flex gap-2">
+                  <Link
+                    href={`/admin/buildings/${building.id}/entrances`}
+                    className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                    title="Manage Entrances"
+                  >
+                    <DoorOpen className="h-5 w-5" />
+                  </Link>
                   <Link
                     href={`/admin/buildings/${building.id}`}
                     className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"

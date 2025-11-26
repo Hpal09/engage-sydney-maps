@@ -13,6 +13,14 @@ export async function GET(
       where: { id },
       include: {
         connectionPoints: true,
+        indoorPOIs: {
+          where: {
+            isLive: true,
+          },
+          orderBy: {
+            name: 'asc',
+          },
+        },
         Building: {
           include: {
             Place: {

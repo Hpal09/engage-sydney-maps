@@ -84,20 +84,23 @@ model MapSettings {
 }
 
 model Feedback {
-  id         String   @id @default(cuid())
-  placeId    String   @map("place_id")
-  rating     Int?     // 1-5 rating
-  comment    String?  @db.Text
-  category   String?  // e.g., "accuracy", "hours", "info", "general"
-  status     String   @default("pending") // pending, reviewed, resolved, dismissed
-  isFlagged  Boolean  @default(false) @map("is_flagged")
-  isEscalated Boolean @default(false) @map("is_escalated")
-  adminNotes String?  @db.Text @map("admin_notes")
-  createdAt  DateTime @default(now()) @map("created_at")
-  updatedAt  DateTime @default(now()) @updatedAt @map("updated_at")
-  Place      Place    @relation(fields: [placeId], references: [id], onDelete: Cascade)
+  id          String     @id @default(cuid())
+  placeId     String?    @map("place_id")
+  indoorPoiId String?    @map("indoor_poi_id")
+  rating      Int?       // 1-5 rating
+  comment     String?    @db.Text
+  category    String?    // e.g., "accuracy", "hours", "info", "general"
+  status      String     @default("pending") // pending, reviewed, resolved, dismissed
+  isFlagged   Boolean    @default(false) @map("is_flagged")
+  isEscalated Boolean    @default(false) @map("is_escalated")
+  adminNotes  String?    @db.Text @map("admin_notes")
+  createdAt   DateTime   @default(now()) @map("created_at")
+  updatedAt   DateTime   @default(now()) @updatedAt @map("updated_at")
+  Place       Place?     @relation(fields: [placeId], references: [id], onDelete: Cascade)
+  IndoorPOI   IndoorPOI? @relation(fields: [indoorPoiId], references: [id], onDelete: Cascade)
 
   @@index([placeId])
+  @@index([indoorPoiId])
   @@index([status])
   @@index([isFlagged])
   @@index([isEscalated])
@@ -106,13 +109,14 @@ model Feedback {
 
 // Indoor Navigation Models
 model Building {
-  id        String   @id @default(cuid())
-  placeId   String   @unique @map("place_id")
-  name      String
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  Place     Place    @relation(fields: [placeId], references: [id], onDelete: Cascade)
-  floors    Floor[]
+  id               String            @id @default(cuid())
+  placeId          String            @unique @map("place_id")
+  name             String
+  createdAt        DateTime          @default(now()) @map("created_at")
+  updatedAt        DateTime          @updatedAt @map("updated_at")
+  Place            Place             @relation(fields: [placeId], references: [id], onDelete: Cascade)
+  floors           Floor[]
+  buildingEntrances BuildingEntrance[]
 
   @@map("buildings")
 }
@@ -127,6 +131,7 @@ model Floor {
   updatedAt        DateTime          @updatedAt @map("updated_at")
   Building         Building          @relation(fields: [buildingId], references: [id], onDelete: Cascade)
   connectionPoints ConnectionPoint[]
+  indoorPOIs       IndoorPOI[]
 
   @@index([buildingId])
   @@map("floors")
@@ -148,4 +153,62 @@ model ConnectionPoint {
   @@index([floorId])
   @@index([type])
   @@map("connection_points")
+}
+
+// Indoor POIs - Rooms, shops, galleries, etc. within a floor
+model IndoorPOI {
+  id              String     @id @default(cuid())
+  floorId         String     @map("floor_id")
+  name            String
+  category        String?    // "Restaurant", "Shop", "Gallery", "Restroom", etc.
+  description     String?    @db.Text
+  x               Float      // Center X coordinate
+  y               Float      // Center Y coordinate
+  svgElementId    String?    @map("svg_element_id") // Link to SVG layer/path ID
+  hours           String?    @map("opening_hours")
+  priceRange      String?    @map("price_range") // "$", "$$", "$$$", "$$$$"
+  imageUrl        String?    @map("image_url")
+  website         String?
+  phone           String?
+  tags            String[]   @default([])
+  isLive          Boolean    @default(true) @map("is_live")
+  createdAt       DateTime   @default(now()) @map("created_at")
+  updatedAt       DateTime   @updatedAt @map("updated_at")
+  Floor           Floor      @relation(fields: [floorId], references: [id], onDelete: Cascade)
+  Feedback        Feedback[]
+
+  @@index([floorId])
+  @@index([category])
+  @@index([isLive])
+  @@map("indoor_pois")
+}
+
+// Building Entrances - Bridge outdoor GPS navigation to indoor SVG navigation
+model BuildingEntrance {
+  id          String   @id @default(cuid())
+  buildingId  String   @map("building_id")
+  floorId     String   @map("floor_id")
+  name        String   // "Main Entrance", "William Street Entrance", etc.
+  type        String   @default("main") // "main", "side", "emergency", "accessible"
+
+  // Outdoor GPS coordinates (where this entrance is on the street map)
+  lat         Float
+  lng         Float
+
+  // Indoor SVG coordinates (where this entrance connects to on the floor plan)
+  indoorX     Float    @map("indoor_x")
+  indoorY     Float    @map("indoor_y")
+
+  // For pathfinding
+  isAccessible Boolean @default(true) @map("is_accessible") // wheelchair accessible
+  isOpen       Boolean @default(true) @map("is_open") // some entrances may be closed at certain times
+
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  Building    Building @relation(fields: [buildingId], references: [id], onDelete: Cascade)
+
+  @@index([buildingId])
+  @@index([lat, lng])
+  @@map("building_entrances")
 }

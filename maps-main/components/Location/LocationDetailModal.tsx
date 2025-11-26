@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from 'react';
-import { X, MapPin, Share2, GraduationCap, Info, Link, Calendar, Tag, Check, View } from 'lucide-react';
+import { X, MapPin, Share2, GraduationCap, Info, Link, Calendar, Tag, Check, View, MessageSquare } from 'lucide-react';
 import type { Business } from '@/types';
 import type { Deal, Event } from '@/lib/dataService';
 import { formatEventCategory } from '@/lib/categories';
+import FeedbackOverlay from './FeedbackOverlay';
 
 interface Props {
   location: Business | null;
@@ -19,6 +20,7 @@ interface Props {
 
 export default function LocationDetailModal({ location, deals = [], events = [], onClose, onSetStart, onSetDestination, onTakeMeThere, onOpenIndoorMap }: Props) {
   const [shareStatus, setShareStatus] = useState<'idle' | 'copied' | 'shared'>('idle');
+  const [showFeedback, setShowFeedback] = useState(false);
 
   if (!location) return null;
 
@@ -342,34 +344,53 @@ export default function LocationDetailModal({ location, deals = [], events = [],
             </button>
           )}
 
-          {/* Share Button */}
-          <button
-            onClick={handleShare}
-            className={`mt-4 flex w-full items-center justify-center gap-2 rounded-full py-3 font-medium transition-all ${
-              shareStatus === 'idle'
-                ? 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                : 'bg-green-100 text-green-700'
-            }`}
-          >
-            {shareStatus === 'idle' ? (
-              <>
-                <Share2 className="h-4 w-4" />
-                Share Location
-              </>
-            ) : shareStatus === 'copied' ? (
-              <>
-                <Check className="h-4 w-4" />
-                Link Copied!
-              </>
-            ) : (
-              <>
-                <Check className="h-4 w-4" />
-                Shared!
-              </>
-            )}
-          </button>
+          {/* Action Buttons: Feedback & Share */}
+          <div className="mt-4 flex gap-3">
+            <button
+              onClick={() => setShowFeedback(true)}
+              className="flex-1 flex items-center justify-center gap-2 rounded-full py-3 font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 transition-all"
+            >
+              <MessageSquare className="h-4 w-4" />
+              Feedback
+            </button>
+
+            <button
+              onClick={handleShare}
+              className={`flex-1 flex items-center justify-center gap-2 rounded-full py-3 font-medium transition-all ${
+                shareStatus === 'idle'
+                  ? 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  : 'bg-green-100 text-green-700'
+              }`}
+            >
+              {shareStatus === 'idle' ? (
+                <>
+                  <Share2 className="h-4 w-4" />
+                  Share Location
+                </>
+              ) : shareStatus === 'copied' ? (
+                <>
+                  <Check className="h-4 w-4" />
+                  Link Copied!
+                </>
+              ) : (
+                <>
+                  <Check className="h-4 w-4" />
+                  Shared!
+                </>
+              )}
+            </button>
+          </div>
         </div>
       </div>
+
+      {/* Feedback Overlay */}
+      {showFeedback && (
+        <FeedbackOverlay
+          placeId={location.id}
+          placeName={location.name}
+          onClose={() => setShowFeedback(false)}
+        />
+      )}
     </div>
   );
 }

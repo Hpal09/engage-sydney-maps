@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getPlaces, getDeals, getEvents } from '@/lib/dataService';
 import type { Business } from '@/types';
-import type { AIServerPayload, AIEntryContext } from '@/types/ai';
+import type { AIServerPayload, AIEntryContext, AIRecommendation } from '@/types/ai';
 import { aiSearch, buildFollowUps } from '@/lib/ai';
 import { calculateDistance } from '@/lib/coordinateMapper';
 
@@ -324,7 +324,7 @@ export async function POST(req: NextRequest) {
     });
     if (isSmallTalk) {
       const top = sortedNearby.slice(0, 3);
-      const recommendations = top.map((b) => ({
+      const recommendations = top.map((b): AIRecommendation => ({
         type: 'place' as const,
         id: b.id,
         title: b.name,
@@ -412,7 +412,7 @@ export async function POST(req: NextRequest) {
             ).slice(0, 3)
           : businesses.slice(0, 3);
 
-        const recommendations = nearbyFallback.map((b) => ({
+        const recommendations = nearbyFallback.map((b): AIRecommendation => ({
           type: 'place' as const,
           id: b.id,
           title: b.name,
@@ -456,9 +456,9 @@ export async function POST(req: NextRequest) {
         subtitle: b.category,
         distanceMeters: userLocation ? calculateDistance(userLocation, { lat: b.lat, lng: b.lng }) : undefined,
         rating: b.rating ?? null,
-        ratingSource: b.rating ? 'internal' : null,
+        ratingSource: (b.rating ? 'internal' : null) as 'internal' | 'google' | null | undefined,
         priceRange: b.priceRange ?? null,
-        extraBadges: [],
+        extraBadges: [] as string[],
         _openScore: isOpenNow(b.hours) ? 1 : 0,
       }));
 
@@ -500,7 +500,7 @@ export async function POST(req: NextRequest) {
       if (isSuggestQuery && best) {
         recommendations.forEach((r) => {
           if (r.id === best.id) {
-            r.extraBadges = Array.from(new Set([...(r.extraBadges || []), 'Pick']));
+            r.extraBadges = Array.from(new Set([...(r.extraBadges || []), 'Pick'])) as string[];
           }
         });
       }

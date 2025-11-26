@@ -18,6 +18,8 @@ declare global {
 
 import { useCallback, useEffect, useState, useRef, useMemo } from 'react';
 
+import { X } from 'lucide-react';
+
 import CustomSydneyMap from '@/components/Map/CustomSydneyMap';
 
 import AISearch from '@/components/Search/AISearch';
@@ -45,8 +47,11 @@ import { getNextInstruction } from '@/lib/turnByTurn';
 import NavigationPanel from '@/components/Navigation/NavigationPanel';
 
 import LocationDetailModal from '@/components/Location/LocationDetailModal';
+import IndoorPOIModal from '@/components/Location/IndoorPOIModal';
 
 import { validateGraph, logValidationResult } from '@/lib/graphValidator';
+
+import { findPathBetweenPOIs, findMultiFloorPath } from '@/lib/indoorPathfinding';
 
 
 
@@ -330,6 +335,12 @@ export default function Page() {
   const [indoorModeActive, setIndoorModeActive] = useState(false);
   const [selectedFloorId, setSelectedFloorId] = useState<string | null>(null);
   const [buildingData, setBuildingData] = useState<any>(null);
+  const [selectedIndoorPOI, setSelectedIndoorPOI] = useState<any>(null);
+  const [indoorNavigationStart, setIndoorNavigationStart] = useState<any>(null);
+  const [indoorNavigationDestination, setIndoorNavigationDestination] = useState<any>(null);
+  const [indoorRoute, setIndoorRoute] = useState<Array<{x: number; y: number; floorId?: string}> | null>(null);
+  const [currentFloorSvgContent, setCurrentFloorSvgContent] = useState<string>('');
+  const [allFloorSvgContent, setAllFloorSvgContent] = useState<Map<string, string>>(new Map());
 
   const [debugTransformLogTick, setDebugTransformLogTick] = useState(0);
 
@@ -535,7 +546,125 @@ export default function Page() {
     setIndoorModeActive(false);
     setSelectedFloorId(null);
     setBuildingData(null);
+    setSelectedIndoorPOI(null);
   }, []);
+
+  const handleIndoorPOIClick = useCallback((poi: any) => {
+    setSelectedIndoorPOI(poi);
+  }, []);
+
+  // Load SVG content for ALL floors when building data loads
+  useEffect(() => {
+    if (!indoorModeActive || !buildingData?.floors) {
+      setAllFloorSvgContent(new Map());
+      setCurrentFloorSvgContent('');
+      return;
+    }
+
+    // Load SVG for all floors
+    const loadPromises = buildingData.floors.map(async (floor: any) => {
+      if (!floor.svgPath) return { floorId: floor.id, content: '' };
+      try {
+        const response = await fetch(floor.svgPath);
+        const content = await response.text();
+        return { floorId: floor.id, content };
+      } catch (err) {
+        console.error(`Failed to load SVG for floor ${floor.id}:`, err);
+        return { floorId: floor.id, content: '' };
+      }
+    });
+
+    Promise.all(loadPromises).then(results => {
+      const svgMap = new Map<string, string>();
+      results.forEach(({ floorId, content }) => {
+        if (content) svgMap.set(floorId, content);
+      });
+      setAllFloorSvgContent(svgMap);
+      console.log(`📄 Loaded SVG content for ${svgMap.size} floors`);
+    });
+  }, [indoorModeActive, buildingData]);
+
+  // Update current floor SVG when selected floor changes
+  useEffect(() => {
+    if (!selectedFloorId) {
+      setCurrentFloorSvgContent('');
+      return;
+    }
+    const content = allFloorSvgContent.get(selectedFloorId) || '';
+    setCurrentFloorSvgContent(content);
+  }, [selectedFloorId, allFloorSvgContent]);
+
+  // Calculate indoor route when start and destination are set
+  useEffect(() => {
+    if (!indoorNavigationStart || !indoorNavigationDestination || allFloorSvgContent.size === 0) {
+      setIndoorRoute(null);
+      return;
+    }
+
+    console.log('🗺️  Calculating indoor route from', indoorNavigationStart.name, 'to', indoorNavigationDestination.name);
+
+    // Check if on same floor - use single-floor pathfinding
+    if (indoorNavigationStart.floorId === indoorNavigationDestination.floorId) {
+      const floorSvg = allFloorSvgContent.get(indoorNavigationStart.floorId);
+      if (!floorSvg) {
+        console.error('Floor SVG not loaded');
+        setIndoorRoute(null);
+        return;
+      }
+
+      const result = findPathBetweenPOIs(
+        floorSvg,
+        { x: indoorNavigationStart.x, y: indoorNavigationStart.y },
+        { x: indoorNavigationDestination.x, y: indoorNavigationDestination.y }
+      );
+
+      if (result) {
+        // Add floor ID to each node
+        const nodesWithFloor = result.nodes.map(node => ({
+          ...node,
+          floorId: indoorNavigationStart.floorId,
+        }));
+        setIndoorRoute(nodesWithFloor);
+        console.log('✅ Single-floor route calculated:', nodesWithFloor.length, 'nodes');
+      } else {
+        setIndoorRoute(null);
+        console.warn('❌ Could not find single-floor route');
+      }
+    } else {
+      // Multi-floor pathfinding
+      console.log('🪜 Using multi-floor pathfinding');
+
+      const floors = Array.from(allFloorSvgContent.entries()).map(([floorId, svgContent]) => ({
+        floorId,
+        svgContent,
+      }));
+
+      findMultiFloorPath(
+        floors,
+        {
+          x: indoorNavigationStart.x,
+          y: indoorNavigationStart.y,
+          floorId: indoorNavigationStart.floorId,
+        },
+        {
+          x: indoorNavigationDestination.x,
+          y: indoorNavigationDestination.y,
+          floorId: indoorNavigationDestination.floorId,
+        }
+      ).then(result => {
+        if (result) {
+          setIndoorRoute(result.nodes);
+          console.log('✅ Multi-floor route calculated:', result.nodes.length, 'nodes');
+        } else {
+          setIndoorRoute(null);
+          console.warn('❌ Could not find multi-floor route');
+        }
+      }).catch(err => {
+        console.error('Multi-floor pathfinding error:', err);
+        setIndoorRoute(null);
+      });
+    }
+  }, [indoorNavigationStart, indoorNavigationDestination, allFloorSvgContent]);
 
   // Load places, deals, and events on mount
 
@@ -2130,6 +2259,10 @@ export default function Page() {
           selectedFloorId={selectedFloorId}
           onExitIndoorMode={handleExitIndoorMode}
           onFloorChange={setSelectedFloorId}
+          onIndoorPOIClick={handleIndoorPOIClick}
+          indoorNavigationStart={indoorNavigationStart}
+          indoorNavigationDestination={indoorNavigationDestination}
+          indoorRoute={indoorRoute}
         />
       </div>
 
@@ -2595,6 +2728,30 @@ export default function Page() {
 
           </div>
 
+        )}
+
+        {/* Indoor POI Modal */}
+        {selectedIndoorPOI && (
+          <div className="pointer-events-auto">
+            <IndoorPOIModal
+              poi={selectedIndoorPOI}
+              onClose={() => setSelectedIndoorPOI(null)}
+              onSetStart={() => {
+                setIndoorNavigationStart(selectedIndoorPOI);
+                console.log('🎯 Indoor start set:', selectedIndoorPOI.name);
+              }}
+              onSetDestination={() => {
+                setIndoorNavigationDestination(selectedIndoorPOI);
+                console.log('🎯 Indoor destination set:', selectedIndoorPOI.name);
+              }}
+              onTakeMeThere={() => {
+                // Set as destination and calculate route if we have a start
+                setIndoorNavigationDestination(selectedIndoorPOI);
+                console.log('🚶 Navigate to:', selectedIndoorPOI.name);
+                // Route calculation will happen in a useEffect
+              }}
+            />
+          </div>
         )}
 
       </div>

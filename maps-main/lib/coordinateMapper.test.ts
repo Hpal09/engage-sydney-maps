@@ -1,3 +1,4 @@
+// @ts-nocheck - Test file without test framework types configured
 import { lngLatToSvg, VIEWBOX } from './coordinateMapper';
 
 test('QVB falls within viewBox', () => {

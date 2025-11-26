@@ -42,7 +42,7 @@ function LocationIcon({ className }: { className?: string }) {
 
 export default function MapControls({ onZoomIn, onZoomOut, onReset, onRecenter, followMe, onToggleFollowMe, children }: Props) {
   return (
-    <div className="absolute right-4 top-4 z-20 flex flex-col items-center gap-2">
+    <div className="absolute right-4 top-32 z-20 flex flex-col items-center gap-2">
       <button
         aria-label="Zoom in"
         onClick={onZoomIn}

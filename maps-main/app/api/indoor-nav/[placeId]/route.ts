@@ -8,13 +8,21 @@ export async function GET(
   try {
     const { placeId } = params;
 
-    // Fetch building with floors and connection points
+    // Fetch building with floors, connection points, and indoor POIs
     const building = await prisma.building.findUnique({
       where: { placeId },
       include: {
         floors: {
           include: {
             connectionPoints: true,
+            indoorPOIs: {
+              where: {
+                isLive: true,
+              },
+              orderBy: {
+                name: 'asc',
+              },
+            },
           },
           orderBy: {
             floorNumber: 'asc',

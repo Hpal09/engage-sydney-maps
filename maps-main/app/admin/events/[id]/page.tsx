@@ -11,7 +11,7 @@ export default async function EditEventPage({
   const event = await prisma.event.findUnique({
     where: { id: params.id },
     include: {
-      place: {
+      Place: {
         select: { name: true },
       },
     },

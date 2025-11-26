@@ -10,6 +10,7 @@ import { routeToSvgPath } from '@/lib/routeDrawer';
 import { SvgDebugWrapper } from '@/components/SvgDebugWrapper';
 import { CONTROL_POINTS, debugResiduals, getMapTransform, latLngToSvgUsingTransform } from '@/lib/mapCalibration';
 import { MAP_CONSTANTS, GPS_CORNERS } from '@/lib/mapConfig';
+import FloorSelector from './FloorSelector';
 
 const MAP_PIN_SVG_COORD = MAP_CONSTANTS.INITIAL_CENTER; // Target SVG point to center on
 const INITIAL_ZOOM_MULTIPLIER = MAP_CONSTANTS.INITIAL_ZOOM_MULTIPLIER; // Zoom multiplier after fitting content
@@ -43,11 +44,15 @@ interface Props {
   selectedFloorId?: string | null; // Currently selected floor ID
   onExitIndoorMode?: () => void; // Callback to exit indoor mode
   onFloorChange?: (floorId: string) => void; // Callback when floor changes
+  onIndoorPOIClick?: (poi: any) => void; // Callback when indoor POI is clicked
+  indoorNavigationStart?: any; // Indoor navigation start POI
+  indoorNavigationDestination?: any; // Indoor navigation destination POI
+  indoorRoute?: Array<{x: number; y: number; floorId?: string}> | null; // Indoor navigation route with floor info
 }
 
 const FALLBACK_VIEWBOX = `${VIEWBOX.minX} ${VIEWBOX.minY} ${VIEWBOX.width} ${VIEWBOX.height}`;
 
-export default function CustomSydneyMap({ businesses, selectedBusiness, userLocation, onBusinessClick, activeRoute, onCenterOnUser, onCenterOnPoint, smoothNavMarker, navigationStart, navigationDestination, showGraphOverlay = false, debugTransformLogTick, zoomConfig, mapRotation = 0, turnByTurnActive: turnByTurnActiveProp = false, showPOIMarkers = false, indoorModeActive = false, buildingData, selectedFloorId, onExitIndoorMode, onFloorChange }: Props) {
+export default function CustomSydneyMap({ businesses, selectedBusiness, userLocation, onBusinessClick, activeRoute, onCenterOnUser, onCenterOnPoint, smoothNavMarker, navigationStart, navigationDestination, showGraphOverlay = false, debugTransformLogTick, zoomConfig, mapRotation = 0, turnByTurnActive: turnByTurnActiveProp = false, showPOIMarkers = false, indoorModeActive = false, buildingData, selectedFloorId, onExitIndoorMode, onFloorChange, onIndoorPOIClick, indoorNavigationStart, indoorNavigationDestination, indoorRoute }: Props) {
   const wrapperRef = useRef<HTMLDivElement | null>(null);
   const transformRef = useRef<ReactZoomPanPinchRef | null>(null);
   const [svgLoaded, setSvgLoaded] = useState<boolean>(false);
@@ -239,6 +244,8 @@ export default function CustomSydneyMap({ businesses, selectedBusiness, userLoca
       })
       .catch(() => setSvgLoaded(false));
   }, [indoorModeActive, buildingData, selectedFloorId]);
+
+  // No complex event listener setup needed anymore - using simple onClick handler!
 
   const markers = useMemo(() => {
     return businesses.map((b, idx) => {
@@ -495,6 +502,16 @@ export default function CustomSydneyMap({ businesses, selectedBusiness, userLoca
               followMe={followMe}
               onToggleFollowMe={() => setFollowMe((f) => !f)}
             />
+
+            {/* Floor Selector - Only show in indoor mode */}
+            {indoorModeActive && buildingData?.floors && onFloorChange && (
+              <FloorSelector
+                floors={buildingData.floors}
+                selectedFloorId={selectedFloorId || null}
+                onFloorChange={onFloorChange}
+              />
+            )}
+
             <TransformComponent wrapperClass="!w-full !h-full" contentClass="!w-full !h-full">
               <SvgDebugWrapper
                 viewBox={viewBoxStr}
@@ -509,6 +526,42 @@ export default function CustomSydneyMap({ businesses, selectedBusiness, userLoca
                     id="inline-svg-content"
                     ref={svgContentRef}
                     dangerouslySetInnerHTML={{ __html: svgContent }}
+                    onClick={(e) => {
+                      // Only handle clicks in indoor mode
+                      if (!indoorModeActive || !buildingData || !selectedFloorId) return;
+
+                      const currentFloor = buildingData.floors?.find((f: any) => f.id === selectedFloorId);
+                      if (!currentFloor?.indoorPOIs) return;
+
+                      // Traverse up the DOM tree to find the POI group element
+                      let target = e.target as Element | null;
+                      let foundPoi = null;
+
+                      // Keep going up until we find a POI or reach the SVG root
+                      while (target && target !== e.currentTarget) {
+                        const elementId = target.id;
+
+                        if (elementId) {
+                          // Check if this ID matches any POI
+                          const poi = currentFloor.indoorPOIs.find((p: any) => p.svgElementId === elementId);
+                          if (poi) {
+                            foundPoi = poi;
+                            console.log('🎯 POI clicked:', poi.name, '(element:', elementId, ')');
+                            break;
+                          }
+                        }
+
+                        // Move up to parent
+                        target = target.parentElement;
+                      }
+
+                      // If we found a POI, open the modal
+                      if (foundPoi) {
+                        e.stopPropagation();
+                        onIndoorPOIClick?.(foundPoi);
+                      }
+                    }}
+                    style={{ cursor: indoorModeActive ? 'pointer' : 'default' }}
                   />
                 ) : (
                   <rect x="0" y="0" width={viewBox.width} height={viewBox.height} fill="#f3f4f6" />
@@ -590,6 +643,95 @@ export default function CustomSydneyMap({ businesses, selectedBusiness, userLoca
                     </g>
                   );
                 })()}
+
+                {/* Indoor navigation route - only show segments on current floor */}
+                {indoorModeActive && indoorRoute && indoorRoute.length > 0 && (() => {
+                  // Filter route nodes to only those on the current floor
+                  const currentFloorNodes = indoorRoute.filter(node =>
+                    !node.floorId || node.floorId === selectedFloorId
+                  );
+
+                  if (currentFloorNodes.length === 0) return null;
+
+                  // Build continuous path segments on this floor
+                  const segments: Array<Array<{x: number; y: number}>> = [];
+                  let currentSegment: Array<{x: number; y: number}> = [];
+
+                  indoorRoute.forEach((node, index) => {
+                    if (!node.floorId || node.floorId === selectedFloorId) {
+                      currentSegment.push(node);
+                    } else {
+                      // Floor change - save current segment if it has points
+                      if (currentSegment.length > 0) {
+                        segments.push(currentSegment);
+                        currentSegment = [];
+                      }
+                    }
+
+                    // Last node - save segment
+                    if (index === indoorRoute.length - 1 && currentSegment.length > 0) {
+                      segments.push(currentSegment);
+                    }
+                  });
+
+                  return (
+                    <g id="indoor-route" pointerEvents="none">
+                      {segments.map((segment, idx) => (
+                        <polyline
+                          key={idx}
+                          points={segment.map(p => `${p.x},${p.y}`).join(' ')}
+                          fill="none"
+                          stroke="#3b82f6"
+                          strokeWidth={6}
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          opacity={0.8}
+                        />
+                      ))}
+                    </g>
+                  );
+                })()}
+
+                {/* Indoor navigation markers */}
+                {indoorModeActive && (
+                  <g id="indoor-markers" pointerEvents="none">
+                    {/* Start marker - only show on the floor where start POI is located */}
+                    {indoorNavigationStart && indoorNavigationStart.floorId === selectedFloorId && (
+                      <g transform={`translate(${indoorNavigationStart.x},${indoorNavigationStart.y})`}>
+                        <circle cx="0" cy="0" r="12" fill="#22c55e" opacity="0.9" stroke="#fff" strokeWidth="3" />
+                        <text
+                          x="0"
+                          y="0"
+                          fontSize="12"
+                          fontWeight="bold"
+                          fill="#fff"
+                          textAnchor="middle"
+                          dominantBaseline="central"
+                        >
+                          S
+                        </text>
+                      </g>
+                    )}
+
+                    {/* Destination marker - only show on the floor where destination POI is located */}
+                    {indoorNavigationDestination && indoorNavigationDestination.floorId === selectedFloorId && (
+                      <g transform={`translate(${indoorNavigationDestination.x},${indoorNavigationDestination.y})`}>
+                        <circle cx="0" cy="0" r="12" fill="#ef4444" opacity="0.9" stroke="#fff" strokeWidth="3" />
+                        <text
+                          x="0"
+                          y="0"
+                          fontSize="12"
+                          fontWeight="bold"
+                          fill="#fff"
+                          textAnchor="middle"
+                          dominantBaseline="central"
+                        >
+                          D
+                        </text>
+                      </g>
+                    )}
+                  </g>
+                )}
 
                 {/* Business markers - Visible when filtering, otherwise invisible but clickable */}
                 <g>
@@ -910,38 +1052,21 @@ export default function CustomSydneyMap({ businesses, selectedBusiness, userLoca
               </SvgDebugWrapper>
             </TransformComponent>
 
-            {/* Indoor mode floor selector and exit button */}
-            {indoorModeActive && buildingData && onExitIndoorMode && (
-              <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 flex flex-col gap-2 items-center">
-                {/* Exit button */}
+            {/* Indoor mode exit button - top left with hover expand */}
+            {indoorModeActive && onExitIndoorMode && (
+              <div className="absolute top-4 left-4 z-50">
                 <button
                   onClick={onExitIndoorMode}
-                  className="px-4 py-2 bg-gray-900 text-white rounded-full shadow-lg hover:bg-gray-800 transition-colors flex items-center gap-2 text-sm font-medium"
+                  className="group px-3 py-2 bg-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300 flex items-center gap-0 hover:gap-2 overflow-hidden hover:px-4"
+                  style={{ minWidth: '40px' }}
                 >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5 text-gray-700 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                   </svg>
-                  Exit Indoor Map
+                  <span className="text-sm font-medium text-gray-900 whitespace-nowrap max-w-0 group-hover:max-w-xs opacity-0 group-hover:opacity-100 transition-all duration-300">
+                    Exit back to map
+                  </span>
                 </button>
-
-                {/* Floor selector */}
-                {buildingData.floors && buildingData.floors.length > 1 && onFloorChange && (
-                  <div className="bg-white rounded-full shadow-lg p-1 flex gap-1">
-                    {buildingData.floors.map((floor: any) => (
-                      <button
-                        key={floor.id}
-                        onClick={() => onFloorChange(floor.id)}
-                        className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                          selectedFloorId === floor.id
-                            ? 'bg-blue-600 text-white'
-                            : 'bg-white text-gray-700 hover:bg-gray-100'
-                        }`}
-                      >
-                        {floor.name}
-                      </button>
-                    ))}
-                  </div>
-                )}
               </div>
             )}
           </>
