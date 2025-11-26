@@ -1638,7 +1638,11 @@ export default function Page() {
 
       },
 
-      { enableHighAccuracy: true, maximumAge: 1000, timeout: 15000 }
+      {
+        enableHighAccuracy: true,
+        maximumAge: 3000,  // Reduced from 1000ms -> 3000ms (3x less frequent updates = better performance)
+        timeout: 15000
+      }
 
     );
 
