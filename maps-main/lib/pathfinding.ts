@@ -1,5 +1,9 @@
-import type { Intersection, PathGraph, PathNode, PreDefinedRoute } from '@/types';
+import type { Intersection, PathGraph, PathNode, PreDefinedRoute, NodeBoundsData } from '@/types';
 import { getDoorNodeForRoom, getAllDoorNodesForRoom } from './graphBuilder';
+import { Quadtree, Rectangle } from '@timohausmann/quadtree-ts';
+
+// PHASE 2: Spatial index for fast nearest-node lookups
+let nodeQuadtree: Quadtree<Rectangle<NodeBoundsData>> | null = null;
 
 function heuristic(a: PathNode, b: PathNode): number {
   const dx = a.x - b.x;
@@ -72,13 +76,44 @@ export interface PathfindingDiagnostics {
 }
 
 /**
- * Finds the nearest node in the graph to a given point
- * @param graph - The navigation graph
- * @param point - Target point with x,y coordinates
- * @param maxDistance - Maximum acceptable distance (default 500 SVG units)
- * @returns The nearest node, or null if no node within maxDistance
+ * PHASE 2: Build spatial index (quadtree) for fast nearest-node queries
+ * Call this after building the graph to enable O(log n) lookups
  */
-export function findNearestNode(
+export function buildSpatialIndex(graph: PathGraph, bounds?: { x: number; y: number; width: number; height: number }): Quadtree<Rectangle<NodeBoundsData>> {
+  // Default bounds: Sydney map viewBox (from mapConfig)
+  const defaultBounds = bounds || { x: 0, y: 0, width: 726.77, height: 1643.6 };
+
+  const tree = new Quadtree<Rectangle<NodeBoundsData>>(defaultBounds, 10); // Max 10 nodes per cell
+
+  Object.values(graph.nodesById).forEach(node => {
+    // Create a small bounding box around each node using Rectangle
+    tree.insert(new Rectangle({
+      x: node.x - 1,
+      y: node.y - 1,
+      width: 2,
+      height: 2,
+      data: { nodeId: node.id },
+    }));
+  });
+
+  console.log(`📊 Built spatial index with ${Object.keys(graph.nodesById).length} nodes`);
+  return tree;
+}
+
+/**
+ * PHASE 2: Invalidate the spatial index
+ * Call this when the graph changes to force rebuild on next query
+ */
+export function invalidateSpatialIndex(): void {
+  nodeQuadtree = null;
+  console.log('🗑️  Spatial index invalidated');
+}
+
+/**
+ * PHASE 2: Linear search fallback (original implementation)
+ * Used when spatial index is disabled or unavailable
+ */
+function findNearestNodeLinear(
   graph: PathGraph,
   point: { x: number; y: number },
   maxDistance: number = 500
@@ -95,6 +130,93 @@ export function findNearestNode(
   }
 
   // Validate distance is within acceptable range
+  if (best && bestDist <= maxDistance) {
+    return best;
+  }
+  return null;
+}
+
+/**
+ * PHASE 2: Quadtree search (optimized implementation)
+ * Reduces search from O(n) to O(log n) using spatial indexing
+ */
+function findNearestNodeQuadtree(
+  graph: PathGraph,
+  point: { x: number; y: number },
+  maxDistance: number = 500
+): PathNode | null {
+  if (!nodeQuadtree) {
+    // Build index on first use
+    nodeQuadtree = buildSpatialIndex(graph);
+  }
+
+  // Query quadtree for candidates within search area
+  const searchArea = new Rectangle({
+    x: point.x - maxDistance,
+    y: point.y - maxDistance,
+    width: maxDistance * 2,
+    height: maxDistance * 2,
+  });
+
+  const candidates = nodeQuadtree.retrieve(searchArea);
+
+  // Find closest among candidates
+  let best: PathNode | null = null;
+  let bestDist = Infinity;
+
+  for (const candidate of candidates) {
+    const nodeId = candidate.data?.nodeId;
+    if (!nodeId) continue;
+
+    const node = graph.nodesById[nodeId];
+    if (!node) continue;
+
+    const dist = Math.hypot(node.x - point.x, node.y - point.y);
+    if (dist < bestDist && dist <= maxDistance) {
+      bestDist = dist;
+      best = node;
+    }
+  }
+
+  if (candidates.length > 0) {
+    console.log(`🎯 Quadtree search: checked ${candidates.length} candidates (vs ${Object.keys(graph.nodesById).length} total nodes)`);
+  }
+
+  return best;
+}
+
+/**
+ * Finds the nearest node in the graph to a given point
+ * PHASE 2: Now uses spatial index for O(log n) performance
+ * @param graph - The navigation graph
+ * @param point - Target point with x,y coordinates
+ * @param maxDistance - Maximum acceptable distance (default 500 SVG units)
+ * @returns The nearest node, or null if no node within maxDistance
+ */
+export function findNearestNode(
+  graph: PathGraph,
+  point: { x: number; y: number },
+  maxDistance: number = 500
+): PathNode | null {
+  const useSpatialIndex = process.env.NEXT_PUBLIC_USE_SPATIAL_INDEX !== 'false';
+
+  let best: PathNode | null = null;
+  let bestDist = Infinity;
+
+  if (useSpatialIndex) {
+    best = findNearestNodeQuadtree(graph, point, maxDistance);
+    // Calculate distance for logging
+    if (best) {
+      bestDist = Math.hypot(best.x - point.x, best.y - point.y);
+    }
+  } else {
+    best = findNearestNodeLinear(graph, point, maxDistance);
+    if (best) {
+      bestDist = Math.hypot(best.x - point.x, best.y - point.y);
+    }
+  }
+
+  // Validate and log results
   if (best && bestDist <= maxDistance) {
     console.log(`✓ Found nearest node ${best.id} at distance ${bestDist.toFixed(1)} units from point (${point.x.toFixed(1)}, ${point.y.toFixed(1)})`);
     return best;

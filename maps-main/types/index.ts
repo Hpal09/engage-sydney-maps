@@ -82,6 +82,15 @@ export interface PathGraph {
   predefinedRoutes?: PreDefinedRoute[];
 }
 
+/**
+ * PHASE 2: Spatial Index - Node bounds for quadtree
+ * Used to efficiently find nearest nodes using spatial indexing
+ * Custom data type for quadtree Rectangle objects
+ */
+export interface NodeBoundsData {
+  nodeId: string; // Reference to the node
+}
+
 export interface RouteSummary {
   distanceMeters: number;
   durationMinutes: number;

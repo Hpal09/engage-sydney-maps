@@ -18,6 +18,9 @@ declare global {
 
 import { useCallback, useEffect, useState, useRef, useMemo } from 'react';
 
+import { throttle } from 'lodash-es';
+import { getKalmanFilterManager } from '@/lib/kalmanFilter';
+
 import { X } from 'lucide-react';
 
 import CustomSydneyMap from '@/components/Map/CustomSydneyMap';
@@ -37,6 +40,7 @@ import type { Deal, Event } from '@/lib/dataService';
 import { getIntersectionsWithGps } from '@/data/intersections';
 
 import { findAnyRoute, findRoute, findRouteWithDiagnostics, type PathfindingDiagnostics } from '@/lib/pathfinding';
+import { findRouteWithWorker } from '@/lib/pathfindingWorkerManager';
 
 import { buildPathNetwork } from '@/lib/graphLoader';
 
@@ -590,6 +594,16 @@ export default function Page() {
     });
   }, [indoorModeActive, buildingData]);
 
+  // PHASE 1: Clear indoor graph cache when exiting indoor mode
+  useEffect(() => {
+    if (!indoorModeActive) {
+      // Dynamically import and call cache clearing function
+      import('@/lib/indoorPathfinding').then(({ clearIndoorGraphCache }) => {
+        clearIndoorGraphCache();
+      });
+    }
+  }, [indoorModeActive]);
+
   // Load building entrances for hybrid navigation
   useEffect(() => {
     async function loadBuildingEntrances() {
@@ -1118,15 +1132,11 @@ export default function Page() {
   }, [allPlaces, allDeals, allEvents, keyword, selectedCategory, activeTabs, nearMeOnly, userLocation]);
 
 
-
-  useEffect(() => {
-
-    if (!navigator.geolocation) return;
-
-    const watchId = navigator.geolocation.watchPosition(
-
-      (pos) => {
-
+  // PHASE 1: Throttled GPS processing function to reduce overhead
+  // useMemo creates a stable throttled function that won't change on every render
+  const processGPSUpdate = useMemo(
+    () => throttle(
+      (pos: GeolocationPosition) => {
         // Skip GPS updates if we're in mock arrival mode
         if (mockArrivedLocation) {
           console.log('📍 GPS update skipped - mock arrival mode active');
@@ -1153,9 +1163,9 @@ export default function Page() {
 
         // GPS FILTERING: Reject low-accuracy readings to prevent jumps
 
-        // RELAXED: Allow lower accuracy for better reliability, especially during initial GPS acquisition
+        // PHASE 1 OPTIMIZATION: Tightened accuracy filter for better location quality
 
-        const MAX_ACCURACY = 100; // meters - relaxed from 50m to allow GPS to work in urban/indoor environments
+        const MAX_ACCURACY = parseInt(process.env.NEXT_PUBLIC_GPS_MAX_ACCURACY || '30', 10); // meters - tightened from 100m for better accuracy
 
         if (!simulateAtQvb && fresh.accuracy && fresh.accuracy > MAX_ACCURACY) {
 
@@ -1183,7 +1193,7 @@ export default function Page() {
 
           const timeDelta = ((fresh.timestamp || 0) - (lastShownRef.current.timestamp || 0)) / 1000; // seconds
 
-          const MAX_WALKING_SPEED = 8; // m/s (~29 km/h) - relaxed to account for GPS caching delays and running
+          const MAX_WALKING_SPEED = parseFloat(process.env.NEXT_PUBLIC_GPS_MAX_WALKING_SPEED || '2.5'); // m/s (~9 km/h) - realistic walking speed to detect GPS jumps
 
 
 
@@ -1370,6 +1380,27 @@ export default function Page() {
 
 
 
+        // PHASE 6: Apply Kalman filter for smoother GPS tracking
+        const useKalmanFilter = process.env.NEXT_PUBLIC_USE_KALMAN_FILTER !== 'false';
+        if (useKalmanFilter && !simulateAtQvb) {
+          const kalmanManager = getKalmanFilterManager();
+          const filtered = kalmanManager.processGPS(
+            shown.lat,
+            shown.lng,
+            shown.accuracy,
+            shown.heading ?? undefined
+          );
+
+          // Use filtered coordinates
+          shown = {
+            ...shown,
+            lat: filtered.lat,
+            lng: filtered.lng
+          };
+
+          console.log('🎯 Kalman filter applied');
+        }
+
         lastShownRef.current = { lat: shown.lat, lng: shown.lng, timestamp: shown.timestamp };
 
         setUserLocation(shown);
@@ -1555,12 +1586,15 @@ export default function Page() {
 
 
             // Calculate angle: Use device heading if available, otherwise use route direction
+            // UX ENHANCEMENT: Use device heading (gyro/compass) for better navigation UX
 
             let angleDeg: number;
 
-            if (typeof shown.heading === 'number' && !Number.isNaN(shown.heading)) {
+            const useDeviceHeading = process.env.NEXT_PUBLIC_USE_DEVICE_HEADING_POINTER !== 'false';
 
-              // Use actual device heading (compass direction)
+            if (useDeviceHeading && effectiveHeading !== null && !Number.isNaN(effectiveHeading)) {
+
+              // Use combined device heading (GPS + compass/gyro) for where user is facing
 
               // GPS heading is 0° = North, 90° = East, 180° = South, 270° = West
 
@@ -1568,7 +1602,9 @@ export default function Page() {
 
               // Convert GPS heading to SVG rotation: subtract 90° to align North with upward
 
-              angleDeg = shown.heading - 90;
+              angleDeg = effectiveHeading - 90;
+
+              console.log('🧭 Navigation pointer using device heading:', effectiveHeading.toFixed(1) + '°');
 
             } else {
 
@@ -1577,6 +1613,8 @@ export default function Page() {
               const angleRad = Math.atan2(aby, abx);
 
               angleDeg = (angleRad * 180) / Math.PI;
+
+              console.log('📍 Navigation pointer using route direction (no heading available)');
 
             }
 
@@ -1674,6 +1712,18 @@ export default function Page() {
         }
 
       },
+      parseInt(process.env.NEXT_PUBLIC_GPS_THROTTLE_MS || '1000', 10) // PHASE 1: Throttle to max 1 update per second
+    ),
+    [mockArrivedLocation, simulateAtQvb, activeRoute, projectLatLng, turnByTurnActive, navigationStart]
+  );
+
+  useEffect(() => {
+
+    if (!navigator.geolocation) return;
+
+    const watchId = navigator.geolocation.watchPosition(
+
+      processGPSUpdate,
 
       (error) => {
 
@@ -1683,7 +1733,7 @@ export default function Page() {
 
       {
         enableHighAccuracy: true,
-        maximumAge: 3000,  // Reduced from 1000ms -> 3000ms (3x less frequent updates = better performance)
+        maximumAge: parseInt(process.env.NEXT_PUBLIC_GPS_MAXIMUM_AGE || '5000', 10),  // PHASE 1: Increased to 5000ms to reduce update frequency
         timeout: 15000
       }
 
@@ -1691,7 +1741,7 @@ export default function Page() {
 
     return () => navigator.geolocation.clearWatch(watchId);
 
-  }, [activeRoute, projectLatLng, turnByTurnActive, simulateAtQvb, mockArrivedLocation]);
+  }, [processGPSUpdate]); // PHASE 1: Simplified dependencies - processGPSUpdate includes all needed deps
 
 
 
@@ -1707,7 +1757,7 @@ export default function Page() {
     // Optimized animation - only update when there's significant change
     let animationFrame: number;
     let lastUpdateTime = 0;
-    const UPDATE_INTERVAL = 50; // Update every 50ms (20fps) instead of 60fps
+    const UPDATE_INTERVAL = parseInt(process.env.NEXT_PUBLIC_ANIMATION_FRAME_INTERVAL || '100', 10); // PHASE 1: Update every 100ms (10fps) for better performance
 
     const animate = (timestamp: number) => {
       const target = navMarkerRef.current;
@@ -1728,10 +1778,10 @@ export default function Page() {
         const newX = prev.x + (target.x - prev.x) * smoothFactor;
         const newY = prev.y + (target.y - prev.y) * smoothFactor;
 
-        // Skip update if position hasn't changed significantly
+        // Skip update if position hasn't changed significantly (PHASE 1: increased threshold)
         const dx = Math.abs(newX - prev.x);
         const dy = Math.abs(newY - prev.y);
-        if (dx < 0.1 && dy < 0.1) return prev;
+        if (dx < 0.5 && dy < 0.5) return prev;
 
         // Smooth angle interpolation with wrapping
         let angleDiff = target.angleDeg - prev.angleDeg;
@@ -2185,11 +2235,28 @@ export default function Page() {
 
       const graph = (window as any).__SYD_GRAPH__ as import('@/types').PathGraph;
 
+      // PHASE 3: Use Web Worker for pathfinding to prevent UI freezes
+      const useWorker = process.env.NEXT_PUBLIC_USE_WEB_WORKERS !== 'false';
 
+      // Find route using worker (with automatic fallback to main thread)
+      const result = await findRouteWithWorker(
+        graph,
+        startInt,
+        endInt,
+        start.id,
+        destination.id,
+        useWorker
+      );
 
-      // Use diagnostics function for better debugging and fallback
-      // Pass Place IDs for pre-defined route matching
-      const diagnostics = findRouteWithDiagnostics(graph, startInt, endInt, start.id, destination.id);
+      // Create diagnostics object for debug overlay
+      const diagnostics: PathfindingDiagnostics = {
+        route: result.route,
+        startNode: result.route[0] || null,
+        endNode: result.route[result.route.length - 1] || null,
+        startDistance: 0,
+        endDistance: 0,
+        algorithm: result.algorithm
+      };
 
       setPathfindingDiag(diagnostics);  // Store for debug overlay
 

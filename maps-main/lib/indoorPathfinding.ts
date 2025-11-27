@@ -5,6 +5,17 @@
  * to navigate between indoor POIs, including multi-floor navigation.
  */
 
+import { Quadtree, Rectangle } from '@timohausmann/quadtree-ts';
+import type { NodeBoundsData } from '@/types';
+
+// PHASE 1: In-memory cache for built graphs to avoid re-parsing on every navigation
+// PHASE 2: Now also caches spatial indexes for fast nearest-node queries
+interface CachedGraph {
+  graph: Map<string, GraphNode>;
+  quadtree: Quadtree<Rectangle<NodeBoundsData>> | null;
+}
+const graphCache = new Map<string, CachedGraph>();
+
 interface Point {
   x: number;
   y: number;
@@ -92,9 +103,65 @@ export function parseSvgPaths(svgContent: string): PathSegment[] {
 }
 
 /**
+ * PHASE 1: Clear the indoor graph cache
+ * Call this when exiting indoor mode or when graphs need to be rebuilt
+ */
+export function clearIndoorGraphCache(): void {
+  graphCache.clear();
+  console.log('🗑️  Indoor graph cache cleared');
+}
+
+/**
+ * PHASE 2: Build spatial index for indoor graph
+ * Creates a quadtree for fast nearest-node queries
+ */
+function buildIndoorSpatialIndex(graph: Map<string, GraphNode>, bounds?: { x: number; y: number; width: number; height: number }): Quadtree<Rectangle<NodeBoundsData>> | null {
+  const useSpatialIndex = process.env.NEXT_PUBLIC_USE_SPATIAL_INDEX !== 'false';
+  if (!useSpatialIndex) return null;
+
+  // Default bounds for indoor spaces (typical SVG viewBox for indoor floor plans)
+  const defaultBounds = bounds || { x: 0, y: 0, width: 2000, height: 2000 };
+
+  const tree = new Quadtree<Rectangle<NodeBoundsData>>(defaultBounds, 10);
+
+  for (const [id, node] of graph.entries()) {
+    tree.insert(new Rectangle({
+      x: node.point.x - 1,
+      y: node.point.y - 1,
+      width: 2,
+      height: 2,
+      data: { nodeId: id },
+    }));
+  }
+
+  console.log(`📊 Built indoor spatial index with ${graph.size} nodes`);
+  return tree;
+}
+
+/**
+ * Create a cache key from segments
+ */
+function createSegmentsCacheKey(segments: PathSegment[]): string {
+  // Simple hash based on segment count and first/last segment IDs
+  if (segments.length === 0) return 'empty';
+  return `seg-${segments.length}-${segments[0].id}-${segments[segments.length - 1].id}`;
+}
+
+/**
  * Build a navigation graph from path segments
+ * PHASE 1: Now with caching to avoid re-parsing on every navigation
+ * PHASE 2: Now also builds spatial index for fast queries
  */
 export function buildNavigationGraph(segments: PathSegment[]): Map<string, GraphNode> {
+  // PHASE 1: Check cache first
+  const cacheKey = createSegmentsCacheKey(segments);
+  const useCache = process.env.NEXT_PUBLIC_ENABLE_INDOOR_GRAPH_CACHE !== 'false';
+
+  if (useCache && graphCache.has(cacheKey)) {
+    console.log('✨ Using cached navigation graph');
+    return graphCache.get(cacheKey)!.graph;
+  }
+
   const nodes = new Map<string, GraphNode>();
   let nodeIdCounter = 0;
 
@@ -131,13 +198,67 @@ export function buildNavigationGraph(segments: PathSegment[]): Map<string, Graph
   });
 
   console.log(`🗺️  Built navigation graph with ${nodes.size} nodes`);
+
+  // PHASE 2: Build spatial index
+  const quadtree = buildIndoorSpatialIndex(nodes);
+
+  // PHASE 1 & 2: Store in cache (graph + quadtree)
+  if (useCache) {
+    graphCache.set(cacheKey, { graph: nodes, quadtree });
+    console.log('💾 Cached navigation graph' + (quadtree ? ' with spatial index' : ''));
+  }
+
   return nodes;
 }
 
 /**
  * Find the closest node to a given point
+ * PHASE 2: Now supports spatial index for faster queries
  */
-export function findClosestNode(point: Point, graph: Map<string, GraphNode>): string | null {
+export function findClosestNode(
+  point: Point,
+  graph: Map<string, GraphNode>,
+  quadtree?: Quadtree<Rectangle<NodeBoundsData>> | null,
+  maxDistance: number = 500
+): string | null {
+  const useSpatialIndex = process.env.NEXT_PUBLIC_USE_SPATIAL_INDEX !== 'false';
+
+  // Use quadtree if available and enabled
+  if (useSpatialIndex && quadtree) {
+    const searchArea = new Rectangle({
+      x: point.x - maxDistance,
+      y: point.y - maxDistance,
+      width: maxDistance * 2,
+      height: maxDistance * 2,
+    });
+
+    const candidates = quadtree.retrieve(searchArea);
+
+    let closestId: string | null = null;
+    let closestDist = Infinity;
+
+    for (const candidate of candidates) {
+      const nodeId = candidate.data?.nodeId;
+      if (!nodeId) continue;
+
+      const node = graph.get(nodeId);
+      if (!node) continue;
+
+      const dist = distance(point, node.point);
+      if (dist < closestDist) {
+        closestDist = dist;
+        closestId = nodeId;
+      }
+    }
+
+    if (candidates.length > 0) {
+      console.log(`🎯 Indoor quadtree search: checked ${candidates.length} candidates (vs ${graph.size} total nodes)`);
+    }
+
+    return closestId;
+  }
+
+  // Fallback to linear search
   let closestId: string | null = null;
   let closestDist = Infinity;
 
@@ -358,10 +479,21 @@ function parsePortals(svgContent: string, floorId: string): Portal[] {
 
 /**
  * Build multi-floor navigation graph with portal-based connections
+ * PHASE 1: Now with caching to avoid re-parsing on every floor change
+ * PHASE 2: Now also builds spatial index for fast queries
  */
 export function buildMultiFloorGraph(
   floorData: Array<{ floorId: string; segments: PathSegment[]; svgContent: string }>
 ): Map<string, GraphNode> {
+  // PHASE 1: Check cache first
+  const cacheKey = 'multifloor-' + floorData.map(f => f.floorId).sort().join('+');
+  const useCache = process.env.NEXT_PUBLIC_ENABLE_INDOOR_GRAPH_CACHE !== 'false';
+
+  if (useCache && graphCache.has(cacheKey)) {
+    console.log('✨ Using cached multi-floor graph');
+    return graphCache.get(cacheKey)!.graph;
+  }
+
   const nodes = new Map<string, GraphNode>();
   let nodeIdCounter = 0;
 
@@ -479,6 +611,16 @@ export function buildMultiFloorGraph(
   });
 
   console.log(`🗺️  Built multi-floor navigation graph with ${nodes.size} nodes and ${portalConnectionCount} portal connections`);
+
+  // PHASE 2: Build spatial index
+  const quadtree = buildIndoorSpatialIndex(nodes);
+
+  // PHASE 1 & 2: Store in cache (graph + quadtree)
+  if (useCache) {
+    graphCache.set(cacheKey, { graph: nodes, quadtree });
+    console.log('💾 Cached multi-floor graph' + (quadtree ? ' with spatial index' : ''));
+  }
+
   return nodes;
 }
 
