@@ -412,6 +412,8 @@ export default function Page() {
 
   const compassSmoothAlphaRef = useRef<number>(SMOOTHING.COMPASS_HEADING_ALPHA);
 
+  const compassSetupRef = useRef<(() => void) | null>(null);
+
 
 
   const projectLatLng = useCallback((lat: number, lng: number) => gpsToSvg(lat, lng), []);
@@ -1815,7 +1817,13 @@ export default function Page() {
 
     console.log('🧭 Setting up compass orientation listener');
 
-    
+
+
+    let cleanupFunction: (() => void) | null = null;
+
+    let orientationHandler: ((event: DeviceOrientationEvent) => void) | null = null;
+
+
 
     // Request permission on iOS 13+
 
@@ -1856,6 +1864,18 @@ export default function Page() {
 
 
     const setupCompass = async () => {
+
+      // Clean up any existing listener first
+
+      if (cleanupFunction) {
+
+        cleanupFunction();
+
+        cleanupFunction = null;
+
+      }
+
+
 
       const permitted = await requestPermission();
 
@@ -1941,17 +1961,25 @@ export default function Page() {
 
 
 
+      orientationHandler = handleOrientation;
+
       window.addEventListener('deviceorientation', handleOrientation, true);
 
       console.log('✅ Compass listener added');
 
 
 
-      return () => {
+      // Store cleanup function
 
-        window.removeEventListener('deviceorientation', handleOrientation, true);
+      cleanupFunction = () => {
 
-        console.log('🛑 Compass listener removed');
+        if (orientationHandler) {
+
+          window.removeEventListener('deviceorientation', orientationHandler, true);
+
+          console.log('🛑 Compass listener removed');
+
+        }
 
       };
 
@@ -1959,7 +1987,33 @@ export default function Page() {
 
 
 
+    // Store setup function in ref so button can trigger it
+
+    compassSetupRef.current = () => {
+
+      setupCompass();
+
+    };
+
+
+
+    // Auto-setup on mount
+
     setupCompass();
+
+
+
+    // Return cleanup function
+
+    return () => {
+
+      if (cleanupFunction) {
+
+        cleanupFunction();
+
+      }
+
+    };
 
   }, []);
 
@@ -2613,31 +2667,17 @@ export default function Page() {
 
             onClick={async () => {
 
-              if (typeof (DeviceOrientationEvent as any).requestPermission === 'function') {
+              // Trigger compass setup (will request permission if needed)
 
-                try {
+              if (compassSetupRef.current) {
 
-                  const permission = await (DeviceOrientationEvent as any).requestPermission();
+                compassSetupRef.current();
 
-                  if (permission === 'granted') {
-
-                    alert('🧭 Compass enabled! Your arrow will now rotate with your device.');
-
-                  } else {
-
-                    alert('⚠️ Compass permission denied. Please enable in Settings.');
-
-                  }
-
-                } catch (error) {
-
-                  console.error('Error requesting compass:', error);
-
-                }
+                alert('🧭 Compass enabled! Rotate your device to see the navigation arrow rotate.');
 
               } else {
 
-                alert('🧭 Compass already active! Rotate your device to see the arrow move.');
+                console.error('❌ Compass setup function not available');
 
               }
 
