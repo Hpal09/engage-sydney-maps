@@ -1165,9 +1165,11 @@ export default function Page() {
 
         // GPS FILTERING: Reject low-accuracy readings to prevent jumps
 
-        // PHASE 1 OPTIMIZATION: Tightened accuracy filter for better location quality
+        // PHASE 1 OPTIMIZATION: Balanced accuracy filter for urban/indoor environments
 
-        const MAX_ACCURACY = parseInt(process.env.NEXT_PUBLIC_GPS_MAX_ACCURACY || '30', 10); // meters - tightened from 100m for better accuracy
+        // UPDATED: Relaxed from 30m to 50m to reduce location jumping in urban areas
+
+        const MAX_ACCURACY = parseInt(process.env.NEXT_PUBLIC_GPS_MAX_ACCURACY || '50', 10); // meters - relaxed for better position continuity
 
         if (!simulateAtQvb && fresh.accuracy && fresh.accuracy > MAX_ACCURACY) {
 
@@ -1195,7 +1197,9 @@ export default function Page() {
 
           const timeDelta = ((fresh.timestamp || 0) - (lastShownRef.current.timestamp || 0)) / 1000; // seconds
 
-          const MAX_WALKING_SPEED = parseFloat(process.env.NEXT_PUBLIC_GPS_MAX_WALKING_SPEED || '2.5'); // m/s (~9 km/h) - realistic walking speed to detect GPS jumps
+          // UPDATED: Relaxed from 2.5 to 3.5 m/s to allow faster GPS position corrections
+
+          const MAX_WALKING_SPEED = parseFloat(process.env.NEXT_PUBLIC_GPS_MAX_WALKING_SPEED || '3.5'); // m/s (~12.6 km/h) - allows GPS corrections and fast walking
 
 
 
