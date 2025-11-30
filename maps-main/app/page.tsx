@@ -1233,17 +1233,19 @@ export default function Page() {
 
         // Log successful GPS acquisition for debugging
 
-        console.log('✅ GPS location accepted:', {
+        // PERFORMANCE: Disabled frequent GPS logging to prevent mobile lag
 
-          lat: fresh.lat.toFixed(6),
+        // console.log('✅ GPS location accepted:', {
 
-          lng: fresh.lng.toFixed(6),
+        //   lat: fresh.lat.toFixed(6),
 
-          accuracy: fresh.accuracy ? fresh.accuracy.toFixed(1) + 'm' : 'unknown',
+        //   lng: fresh.lng.toFixed(6),
 
-          heading: fresh.heading !== null && fresh.heading !== undefined ? fresh.heading.toFixed(1) + '°' : 'none'
+        //   accuracy: fresh.accuracy ? fresh.accuracy.toFixed(1) + 'm' : 'unknown',
 
-        });
+        //   heading: fresh.heading !== null && fresh.heading !== undefined ? fresh.heading.toFixed(1) + '°' : 'none'
+
+        // });
 
 
 
@@ -1304,17 +1306,19 @@ export default function Page() {
 
             lastHeadingRef.current = smoothed;
 
-            console.log('📍 GPS heading updated:', {
+            // PERFORMANCE: Disabled frequent GPS heading logging to prevent mobile lag
 
-              raw: derivedHeading.toFixed(1),
+            // console.log('📍 GPS heading updated:', {
 
-              smoothed: smoothed.toFixed(1),
+            //   raw: derivedHeading.toFixed(1),
 
-              speed: speed.toFixed(2),
+            //   smoothed: smoothed.toFixed(1),
 
-              moving: speed > SMOOTHING.SPEED_STATIONARY_THRESHOLD
+            //   speed: speed.toFixed(2),
 
-            });
+            //   moving: speed > SMOOTHING.SPEED_STATIONARY_THRESHOLD
+
+            // });
 
           } else {
 
@@ -1322,7 +1326,7 @@ export default function Page() {
 
             shown = { ...shown, heading: currentHeading };
 
-            console.log('📍 Keeping previous GPS heading - change too small');
+            // console.log('📍 Keeping previous GPS heading - change too small');
 
           }
 
@@ -1360,7 +1364,7 @@ export default function Page() {
 
             };
 
-            console.log('📍 Position smoothed (stationary)');
+            // console.log('📍 Position smoothed (stationary)');
 
           } else if (isWalking) {
 
@@ -1376,7 +1380,7 @@ export default function Page() {
 
             };
 
-            console.log('📍 Position smoothed (walking)');
+            // console.log('📍 Position smoothed (walking)');
 
           }
 
@@ -1404,7 +1408,7 @@ export default function Page() {
             lng: filtered.lng
           };
 
-          console.log('🎯 Kalman filter applied');
+          // console.log('🎯 Kalman filter applied');
         }
 
         lastShownRef.current = { lat: shown.lat, lng: shown.lng, timestamp: shown.timestamp };
@@ -1610,7 +1614,7 @@ export default function Page() {
 
               angleDeg = effectiveHeading - 90;
 
-              console.log('🧭 Navigation pointer using device heading:', effectiveHeading.toFixed(1) + '°');
+              // console.log('🧭 Navigation pointer using device heading:', effectiveHeading.toFixed(1) + '°');
 
             } else {
 
@@ -1620,7 +1624,7 @@ export default function Page() {
 
               angleDeg = (angleRad * 180) / Math.PI;
 
-              console.log('📍 Navigation pointer using route direction (no heading available)');
+              // console.log('📍 Navigation pointer using route direction (no heading available)');
 
             }
 
@@ -1941,17 +1945,21 @@ export default function Page() {
 
 
 
-        console.log('🧭 Compass heading updated:', {
+        // PERFORMANCE: Disabled frequent compass logging to prevent severe mobile lag
 
-          raw: rawHeading.toFixed(1),
+        // This log was firing multiple times per second and causing major performance issues
 
-          smoothed: smoothedHeading.toFixed(1),
+        // console.log('🧭 Compass heading updated:', {
 
-          previous: currentSmoothed.toFixed(1),
+        //   raw: rawHeading.toFixed(1),
 
-          platform: event.webkitCompassHeading !== undefined ? 'iOS' : 'Android'
+        //   smoothed: smoothedHeading.toFixed(1),
 
-        });
+        //   previous: currentSmoothed.toFixed(1),
+
+        //   platform: event.webkitCompassHeading !== undefined ? 'iOS' : 'Android'
+
+        // });
 
 
 
