@@ -281,11 +281,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(cached.data);
     }
 
-    // Fetch all places from database along with deals/events to allow a mixed list
+    // Fetch places from database with reasonable limits to reduce query time
+    // For AI search, we typically only need top results (not all 1000+ places)
     const [businesses, deals, events] = await Promise.all([
-      getPlaces(),
-      getDeals(),
-      getEvents(),
+      getPlaces({ limit: 100 }), // Limit to 100 most relevant places
+      getDeals({ limit: 50 }),   // Limit to 50 active deals
+      getEvents({ limit: 50 }),  // Limit to 50 active events
     ]);
 
     // Find nearest landmark for context

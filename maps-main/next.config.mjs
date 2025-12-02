@@ -11,6 +11,11 @@ const nextConfig = {
 
   // Optimize for production
   swcMinify: true,
+  compiler: {
+    removeConsole: process.env.NODE_ENV === 'production' ? {
+      exclude: ['error', 'warn'],
+    } : false,
+  },
   // Ensure static files are served correctly
   trailingSlash: false,
   // Security headers

@@ -8,7 +8,14 @@ import type { Business } from "@/types";
  * All data is fetched from the PostgreSQL database via Prisma.
  */
 
-export async function getPlaces(): Promise<Business[]> {
+export interface PaginationOptions {
+  limit?: number;
+  offset?: number;
+}
+
+export async function getPlaces(options?: PaginationOptions): Promise<Business[]> {
+  const { limit, offset } = options || {};
+  
   const places = await prisma.place.findMany({
     where: {
       isLive: true,
@@ -23,6 +30,8 @@ export async function getPlaces(): Promise<Business[]> {
     orderBy: {
       name: "asc",
     },
+    ...(limit !== undefined && { take: limit }),
+    ...(offset !== undefined && { skip: offset }),
   });
 
   // Map Place model to Business type
@@ -72,8 +81,9 @@ export interface Event {
   isLive: boolean;
 }
 
-export async function getDeals(): Promise<Deal[]> {
+export async function getDeals(options?: PaginationOptions): Promise<Deal[]> {
   const now = new Date();
+  const { limit, offset } = options || {};
 
   const deals = await prisma.deal.findMany({
     where: {
@@ -92,6 +102,8 @@ export async function getDeals(): Promise<Deal[]> {
     orderBy: {
       startsAt: "asc",
     },
+    ...(limit !== undefined && { take: limit }),
+    ...(offset !== undefined && { skip: offset }),
   });
 
   return deals.map((d) => ({
@@ -107,8 +119,9 @@ export async function getDeals(): Promise<Deal[]> {
   }));
 }
 
-export async function getEvents(): Promise<Event[]> {
+export async function getEvents(options?: PaginationOptions): Promise<Event[]> {
   const now = new Date();
+  const { limit, offset } = options || {};
 
   const events = await prisma.event.findMany({
     where: {
@@ -127,6 +140,8 @@ export async function getEvents(): Promise<Event[]> {
     orderBy: {
       startsAt: "asc",
     },
+    ...(limit !== undefined && { take: limit }),
+    ...(offset !== undefined && { skip: offset }),
   });
 
   return events.map((e) => ({

@@ -230,16 +230,10 @@ export function getNextInstruction(route: PathNode[], user?: GpsPoint, graph?: i
   // Helper function to get street name from edge between two nodes
   const getStreetName = (fromNode: PathNode, toNode: PathNode): string | undefined => {
     if (!graph) {
-      console.log('⚠️  No graph provided to getNextInstruction');
       return undefined;
     }
     const edges = graph.adjacency[fromNode.id] || [];
     const edge = edges.find(e => e.to === toNode.id);
-    if (edge?.street) {
-      console.log('🏷️  Found street name:', edge.street, 'for edge', fromNode.id, '→', toNode.id);
-    } else {
-      console.log('⚠️  No street name for edge', fromNode.id, '→', toNode.id);
-    }
     return edge?.street;
   };
 

@@ -118,10 +118,19 @@ export default function PredictiveSearch({ options, value, onChange, placeholder
       {label && (
         <label className="mb-1 block text-xs text-gray-500">{label}</label>
       )}
-      <div className="relative">
-        <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4">
-          <Search className="h-4 w-4 text-gray-400" />
-        </div>
+      <div
+        className="relative flex items-center w-full"
+        style={{
+          minWidth: '200px',
+          height: '32px',
+          borderRadius: '20px',
+          border: '1px solid #707070',
+          background: 'rgba(217, 217, 217, 0.00)',
+          padding: '0 11px',
+          gap: '8px'
+        }}
+      >
+        <Search className="h-4 w-4 text-gray-400 flex-shrink-0" />
         <input
           ref={inputRef}
           type="text"
@@ -131,13 +140,23 @@ export default function PredictiveSearch({ options, value, onChange, placeholder
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
           disabled={disabled}
-          className="w-full rounded-2xl border px-4 py-3 pl-11 pr-10 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+          style={{
+            flex: 1,
+            border: 'none',
+            outline: 'none',
+            background: 'transparent',
+            padding: '0',
+            height: '100%',
+            fontSize: '14px',
+            fontFamily: 'Figtree'
+          }}
+          className="disabled:bg-transparent disabled:cursor-not-allowed"
         />
         {inputValue && !disabled && (
           <button
             type="button"
             onClick={handleClear}
-            className="absolute inset-y-0 right-0 flex items-center pr-4 text-gray-400 hover:text-gray-600"
+            className="text-gray-400 hover:text-gray-600 flex-shrink-0"
           >
             <X className="h-4 w-4" />
           </button>
@@ -160,6 +179,7 @@ export default function PredictiveSearch({ options, value, onChange, placeholder
                         ? 'bg-blue-50 text-blue-900'
                         : 'hover:bg-gray-50'
                     }`}
+                    style={{ fontFamily: 'Figtree' }}
                   >
                     <MapPin className={`h-4 w-4 flex-shrink-0 ${
                       index === highlightedIndex ? 'text-blue-600' : 'text-gray-400'
@@ -170,7 +190,7 @@ export default function PredictiveSearch({ options, value, onChange, placeholder
               ))}
             </ul>
           ) : (
-            <div className="px-4 py-8 text-center text-sm text-gray-500">
+            <div className="px-4 py-8 text-center text-sm text-gray-500" style={{ fontFamily: 'Figtree' }}>
               No locations found
             </div>
           )}

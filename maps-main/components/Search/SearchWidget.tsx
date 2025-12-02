@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, memo } from 'react';
 import { Search, X, Sparkles, ChevronDown } from 'lucide-react';
 import SearchResults from './SearchResults';
 import type { Business, DeviceLocation } from '@/types';
@@ -33,7 +33,8 @@ const TOGGLE_TABS: { id: ToggleTabType; label: string }[] = [
   { id: 'experiences', label: 'Experiences' },
 ];
 
-export default function SearchWidget({
+// Memoize component to prevent unnecessary re-renders (PERF-1 optimization)
+const SearchWidget = memo(function SearchWidget({
   keyword,
   onKeywordChange,
   selectedCategory,
@@ -83,39 +84,42 @@ export default function SearchWidget({
       {!isOpen ? (
         /* Compact Search Bar - Show when closed */
         <div className="w-full max-w-xl space-y-3">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-[9px]">
             {/* Search Input */}
             <button
               onClick={() => setIsOpen(true)}
-              className="flex-1 flex items-center gap-3 rounded-full bg-white px-5 py-3.5 text-sm text-left shadow-lg hover:shadow-xl transition-all duration-200 border border-gray-100 hover:border-blue-400 group"
+              className="w-[226px] h-[45px] flex items-center gap-3 rounded-[25px] bg-white px-5 py-3 text-left hover:shadow-xl transition-all duration-200 border border-gray-100 hover:border-blue-400 group"
+              style={{ boxShadow: '1px 1px 4px 0 rgba(0, 0, 0, 0.25)' }}
             >
               <Search className="h-5 w-5 text-gray-400 group-hover:text-blue-500 transition-colors" />
-              <span className="text-gray-600 font-medium">{keyword || 'Search places, deals, events...'}</span>
+              <span className="text-[11px] leading-[100%] text-gray-600 font-normal">{keyword || 'Search places, deals, events...'}</span>
             </button>
 
             {/* AI Mode Button */}
             <button
               onClick={onOpenAI}
-              className="flex items-center gap-2 rounded-full bg-gradient-to-r from-purple-600 to-blue-600 px-5 py-3.5 text-sm font-semibold text-white shadow-lg hover:shadow-xl hover:from-purple-700 hover:to-blue-700 transition-all duration-200 whitespace-nowrap"
+              className="w-[113px] h-[45px] flex items-center justify-center rounded-[25px] bg-gradient-to-r from-[#FF0094] to-[#7616FF] px-[22px] py-[9px] text-white hover:opacity-90 transition-all duration-200 whitespace-nowrap"
+              style={{ filter: 'drop-shadow(1px 1px 4px rgba(0, 0, 0, 0.25))' }}
             >
-              <Sparkles className="h-4 w-4" />
-              <span>AI Mode</span>
+              <span className="text-[16px] leading-[100%] font-bold text-center">AI Mode</span>
             </button>
           </div>
 
           {/* Toggle Tabs - Multi-select */}
-          <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide">
+          <div className="inline-flex justify-center items-center gap-[13px] overflow-x-auto pb-1 scrollbar-hide">
             {TOGGLE_TABS.map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => onTabToggle(tab.id)}
-                className={`whitespace-nowrap rounded-full px-5 py-2.5 text-sm font-semibold transition-all ${
+                className={`flex w-[107px] px-[21px] py-[10px] justify-center items-center gap-[10px] rounded-[17px] border transition-all ${
                   activeTabs.has(tab.id)
-                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-200'
-                    : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-200 hover:border-gray-300'
+                    ? 'bg-[#0096FA] text-white border-[#0096FA] shadow-lg shadow-blue-200'
+                    : 'bg-white text-[#707070] border-[#DADADA] hover:bg-[#0096FA] hover:text-white hover:border-[#0096FA]'
                 }`}
               >
-                {tab.label}
+                <span className="text-[12px] font-medium leading-normal text-center">
+                  {tab.label}
+                </span>
               </button>
             ))}
           </div>
@@ -173,18 +177,20 @@ export default function SearchWidget({
             </div>
 
             {/* Toggle Tabs - Multi-select */}
-            <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide">
+            <div className="inline-flex justify-center items-center gap-[13px] overflow-x-auto pb-1 scrollbar-hide">
               {TOGGLE_TABS.map((tab) => (
                 <button
                   key={tab.id}
                   onClick={() => onTabToggle(tab.id)}
-                  className={`whitespace-nowrap rounded-full px-5 py-2.5 text-sm font-semibold transition-all ${
+                  className={`flex w-[107px] px-[21px] py-[10px] justify-center items-center gap-[10px] rounded-[17px] border transition-all ${
                     activeTabs.has(tab.id)
-                      ? 'bg-blue-600 text-white shadow-lg shadow-blue-200'
-                      : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-200 hover:border-gray-300'
+                      ? 'bg-[#0096FA] text-white border-[#0096FA] shadow-lg shadow-blue-200'
+                      : 'bg-white text-[#707070] border-[#DADADA] hover:bg-[#0096FA] hover:text-white hover:border-[#0096FA]'
                   }`}
                 >
-                  {tab.label}
+                  <span className="text-[12px] font-medium leading-normal text-center">
+                    {tab.label}
+                  </span>
                 </button>
               ))}
             </div>
@@ -222,4 +228,6 @@ export default function SearchWidget({
       )}
     </>
   );
-}
+});
+
+export default SearchWidget;

@@ -17,19 +17,28 @@ declare global {
 
 
 import { useCallback, useEffect, useState, useRef, useMemo } from 'react';
+import dynamic from 'next/dynamic';
 
 import { throttle } from 'lodash-es';
 import { getKalmanFilterManager } from '@/lib/kalmanFilter';
+import { useDebounce } from '@/hooks/useDebounce';
+import { useFilteredPlaces } from '@/hooks/useFilteredPlaces';
 
 import { X } from 'lucide-react';
 
 import CustomSydneyMap from '@/components/Map/CustomSydneyMap';
 
-import AISearch from '@/components/Search/AISearch';
+// Lazy load heavy components for better initial bundle size
+const AISearch = dynamic(() => import('@/components/Search/AISearch'), {
+  loading: () => <div className="flex items-center justify-center h-full"><div className="text-gray-500">Loading AI...</div></div>,
+  ssr: false,
+});
 
 import SearchWidget from '@/components/Search/SearchWidget';
 
-import MapDebugOverlay from '@/components/Debug/MapDebugOverlay';
+const MapDebugOverlay = dynamic(() => import('@/components/Debug/MapDebugOverlay'), {
+  ssr: false,
+});
 
 import type { Business, DeviceLocation, Intersection, PathNode, ZoomConfig } from '@/types';
 
@@ -50,8 +59,13 @@ import { getNextInstruction } from '@/lib/turnByTurn';
 
 import NavigationPanel from '@/components/Navigation/NavigationPanel';
 
-import LocationDetailModal from '@/components/Location/LocationDetailModal';
-import IndoorPOIModal from '@/components/Location/IndoorPOIModal';
+// Lazy load modals - they're only shown conditionally
+const LocationDetailModal = dynamic(() => import('@/components/Location/LocationDetailModal'), {
+  ssr: false,
+});
+const IndoorPOIModal = dynamic(() => import('@/components/Location/IndoorPOIModal'), {
+  ssr: false,
+});
 
 import { validateGraph, logValidationResult } from '@/lib/graphValidator';
 
@@ -267,138 +281,55 @@ function createMockQvbLocation(): DeviceLocation {
 
 
 
-export default function Page() {
+// Import contexts
+import { AppProvider } from '@/contexts/AppProvider';
+import { useSearch } from '@/contexts/SearchContext';
+import { useNavigation } from '@/contexts/NavigationContext';
+import { useMap } from '@/contexts/MapContext';
+import { useLocation } from '@/contexts/LocationContext';
 
-  const [selected, setSelected] = useState<Business | null>(null);
+// Import feature components
+import GPSTracker from '@/components/Features/GPSTracker';
+import NavigationEngine from '@/components/Features/NavigationEngine';
+import IndoorNavigation from '@/components/Features/IndoorNavigation';
+import DataLoader from '@/components/Features/DataLoader';
 
+/**
+ * Main Page Content - refactored to use contexts
+ */
+function PageContent() {
+  // Access contexts (replaces 48 useState declarations!)
+  const search = useSearch();
+  const navigation = useNavigation();
+  const map = useMap();
+  const location = useLocation();
+
+  // Data state - keeping temporarily until AppProvider handles it
   const [allPlaces, setAllPlaces] = useState<Business[]>([]);
-
-  const [filteredPlaces, setFilteredPlaces] = useState<Business[]>([]);
-
-  const [visibleBusinesses, setVisibleBusinesses] = useState<Business[]>([]);
-
-  const [userLocation, setUserLocation] = useState<DeviceLocation | undefined>(undefined);
-
-  const [rawLocation, setRawLocation] = useState<DeviceLocation | undefined>(undefined);
-
   const [allDeals, setAllDeals] = useState<Deal[]>([]);
-
   const [allEvents, setAllEvents] = useState<Event[]>([]);
 
+  // Calculate upcoming events count
+  const upcomingEventsCount = useMemo(() => {
+    const now = new Date();
+    return allEvents.filter(event => event.isLive && new Date(event.endsAt) >= now).length;
+  }, [allEvents]);
 
 
-  // Search state
 
-  const [keyword, setKeyword] = useState('');
-
-  const [selectedCategory, setSelectedCategory] = useState('All categories');
-
-  const [activeTabs, setActiveTabs] = useState<Set<'deals' | 'events' | 'experiences'>>(new Set());
-
-  // Toggle handler for multi-select tabs
-  const handleTabToggle = useCallback((tab: 'deals' | 'events' | 'experiences') => {
-    setActiveTabs(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(tab)) {
-        newSet.delete(tab);
-      } else {
-        newSet.add(tab);
-      }
-      return newSet;
-    });
-  }, []);
-
-  const aiEntryContext = useMemo<AIEntryContext>(() => {
-    if (keyword.trim()) return { type: 'query', query: keyword.trim() };
-    if (selectedCategory && selectedCategory !== 'All categories') {
-      return { type: 'category', category: selectedCategory };
-    }
-    if (activeTabs.has('deals')) return { type: 'category', category: 'deals' };
-    if (activeTabs.has('events') || activeTabs.has('experiences')) return { type: 'category', category: 'events' };
-    return { type: 'fresh' };
-  }, [keyword, selectedCategory, activeTabs]);
-
-  const [aiMode, setAiMode] = useState(false);
-
-  const [pendingQuery, setPendingQuery] = useState<string | undefined>(undefined);
-
-  const [nearMeOnly, setNearMeOnly] = useState(false);
-
-  const [navigationActive, setNavigationActive] = useState(false);
-
-  const [activeRoute, setActiveRoute] = useState<PathNode[] | null>(null);
-
-  const [pathGraph, setPathGraph] = useState<import('@/types').PathGraph | null>(null);
+  // Navigation state now comes from NavigationContext
+  // Map state now comes from MapContext
+  // Location state now comes from LocationContext
+  // All accessed via: navigation.*, map.*, location.*
 
   const intersections: Intersection[] = getIntersectionsWithGps();
 
-  const [centerOnUserTick, setCenterOnUserTick] = useState(0);
-
-  const [centerOnPoint, setCenterOnPoint] = useState<{ lat: number; lng: number; tick: number; targetScale?: number } | null>(null);
-
-  // Indoor navigation state
-  const [indoorModeActive, setIndoorModeActive] = useState(false);
-  const [selectedFloorId, setSelectedFloorId] = useState<string | null>(null);
-  const [buildingData, setBuildingData] = useState<any>(null);
-  const [selectedIndoorPOI, setSelectedIndoorPOI] = useState<any>(null);
-  const [indoorNavigationStart, setIndoorNavigationStart] = useState<any>(null);
-  const [indoorNavigationDestination, setIndoorNavigationDestination] = useState<any>(null);
-  const [indoorRoute, setIndoorRoute] = useState<Array<{x: number; y: number; floorId?: string}> | null>(null);
-  const [currentFloorSvgContent, setCurrentFloorSvgContent] = useState<string>('');
-  const [allFloorSvgContent, setAllFloorSvgContent] = useState<Map<string, string>>(new Map());
-
-  // Hybrid navigation state
-  const [buildingEntrances, setBuildingEntrances] = useState<any[]>([]);
-  const [hybridRouteActive, setHybridRouteActive] = useState(false);
-  const [hybridGraph, setHybridGraph] = useState<Map<string, any> | null>(null);
-
-  const [debugTransformLogTick, setDebugTransformLogTick] = useState(0);
-
-  const [showOutOfArea, setShowOutOfArea] = useState(false);
-
-  const [showLocationModal, setShowLocationModal] = useState(false);
-
-  const [showNavigationError, setShowNavigationError] = useState(false);
-
-  const [navigationErrorMessage, setNavigationErrorMessage] = useState('');
-
-  const [navigationStart, setNavigationStart] = useState<Business | null>(null);
-
-  const [navigationDestination, setNavigationDestination] = useState<Business | null>(null);
-
-  const [turnByTurnActive, setTurnByTurnActive] = useState(false);
-
-  const [currentInstruction, setCurrentInstruction] = useState<string>('');
-
-  const [navMarker, setNavMarker] = useState<{ x: number; y: number; angleDeg: number } | null>(null);
-
+  // Local state for animation (stays local)
   const [smoothNavMarker, setSmoothNavMarker] = useState<{ x: number; y: number; angleDeg: number } | null>(null);
-
   const navMarkerRef = useRef<{ x: number; y: number; angleDeg: number } | null>(null);
-
-  const [simulateAtQvb, setSimulateAtQvb] = useState(false);
-
-  const [routeProgress, setRouteProgress] = useState<number>(0); // Track how far along the route the user is (0-1)
-
-  const [remainingRoute, setRemainingRoute] = useState<PathNode[] | null>(null); // Only the route ahead
-
-  const [isOffRoute, setIsOffRoute] = useState<boolean>(false); // Track if user went off route
-
-  const [distanceFromRoute, setDistanceFromRoute] = useState<number>(0); // Distance in meters from route
-
-  const [showArrivalMessage, setShowArrivalMessage] = useState(false); // Show "You have arrived" message
-
-  const [mockArrivedLocation, setMockArrivedLocation] = useState<DeviceLocation | null>(null); // Mock arrival mode - overrides GPS
-
-  const [compassHeading, setCompassHeading] = useState<number | null>(null);
-
-  const [mapRotation, setMapRotation] = useState<number>(0); // Map rotation in degrees (0 = north-up, heading = heading-up)
-
-  const [showGraphOverlay, setShowGraphOverlay] = useState(false);
-
-  const [pathfindingDiag, setPathfindingDiag] = useState<PathfindingDiagnostics | null>(null);
-
-  const [zoomConfig, setZoomConfig] = useState<ZoomConfig | null>(null);
+  
+  // Local state for arrival message (stays local)
+  const [showArrivalMessage, setShowArrivalMessage] = useState(false);
 
   const lastShownRef = useRef<{ lat: number; lng: number; timestamp?: number } | null>(null);
 
@@ -418,76 +349,10 @@ export default function Page() {
 
   const projectLatLng = useCallback((lat: number, lng: number) => gpsToSvg(lat, lng), []);
 
+  // Filtering is now handled by SearchContext - accessed via search.filteredPlaces
+  // (The useFilteredPlaces hook is called inside SearchProvider)
 
-
-  // Build deals and events maps grouped by place ID
-
-  const dealsByPlaceId = useMemo(() => {
-
-    const now = new Date();
-
-    const map = new Map<string, Deal[]>();
-
-
-
-    allDeals.forEach(deal => {
-
-      // Only include live deals that haven't expired
-
-      if (deal.isLive && new Date(deal.endsAt) >= now) {
-
-        const deals = map.get(deal.placeId) || [];
-
-        deals.push(deal);
-
-        map.set(deal.placeId, deals);
-
-      }
-
-    });
-
-
-
-    return map;
-
-  }, [allDeals]);
-
-
-
-  const eventsByPlaceId = useMemo(() => {
-
-    const now = new Date();
-
-    const map = new Map<string, Event[]>();
-
-
-
-    allEvents.forEach(event => {
-
-      // Only include live events that haven't ended yet
-
-      if (event.isLive && event.placeId && new Date(event.endsAt) >= now) {
-
-        const events = map.get(event.placeId) || [];
-
-        events.push(event);
-
-        map.set(event.placeId, events);
-
-      }
-
-    });
-
-
-
-    return map;
-
-  }, [allEvents]);
-
-  const handleExitAi = useCallback(() => {
-    setAiMode(false);
-    setPendingQuery(undefined);
-  }, []);
+  const handleExitAi = search.handleExitAi; // From SearchContext
 
   const handleAiSelectPlace = useCallback((placeId: string) => {
     const place = allPlaces.find((p) => p.id === placeId);
@@ -495,11 +360,11 @@ export default function Page() {
       console.warn('AI select place not found', placeId);
       return;
     }
-    setSelected(place);
-    setShowLocationModal(true);
-    setCenterOnPoint({ lat: place.lat, lng: place.lng, tick: Date.now(), targetScale: zoomConfig?.destination ?? 2.8 });
+    map.setSelected(place);
+    map.setShowLocationModal(true);
+    map.setCenterOnPoint({ lat: place.lat, lng: place.lng, tick: Date.now(), targetScale: map.zoomConfig?.destination ?? 2.8 });
     handleExitAi();
-  }, [allPlaces, handleExitAi, zoomConfig]);
+  }, [allPlaces, handleExitAi, map]);
 
   const handleAiSelectDeal = useCallback((dealId: string) => {
     const deal = allDeals.find((d) => d.id === dealId);
@@ -526,14 +391,14 @@ export default function Page() {
       console.warn('Search select place not found', placeId);
       return;
     }
-    setSelected(place);
-    setCenterOnPoint({
+    map.setSelected(place);
+    map.setCenterOnPoint({
       lat: place.lat,
       lng: place.lng,
       tick: Date.now(),
-      targetScale: zoomConfig?.destination ?? 2.8,
+      targetScale: map.zoomConfig?.destination ?? 2.8,
     });
-  }, [allPlaces, zoomConfig]);
+  }, [allPlaces, map]);
 
   const handleOpenIndoorMap = useCallback(async (placeId: string) => {
     try {
@@ -543,11 +408,11 @@ export default function Page() {
         return;
       }
       const data = await response.json();
-      setBuildingData(data.building);
-      setIndoorModeActive(true);
+      navigation.setBuildingData(data.building);
+      navigation.setIndoorModeActive(true);
       // Select the first floor (ground floor)
       if (data.building?.floors?.length > 0) {
-        setSelectedFloorId(data.building.floors[0].id);
+        navigation.setSelectedFloorId(data.building.floors[0].id);
       }
     } catch (error) {
       console.error('Error opening indoor map:', error);
@@ -555,439 +420,26 @@ export default function Page() {
   }, []);
 
   const handleExitIndoorMode = useCallback(() => {
-    setIndoorModeActive(false);
-    setSelectedFloorId(null);
-    setBuildingData(null);
-    setSelectedIndoorPOI(null);
-  }, []);
+    navigation.setIndoorModeActive(false);
+    navigation.setSelectedFloorId(null);
+    navigation.setBuildingData(null);
+    navigation.setSelectedIndoorPOI(null);
+  }, [navigation]);
 
   const handleIndoorPOIClick = useCallback((poi: any) => {
-    setSelectedIndoorPOI(poi);
-  }, []);
-
-  // Load SVG content for ALL floors when building data loads
-  useEffect(() => {
-    if (!indoorModeActive || !buildingData?.floors) {
-      setAllFloorSvgContent(new Map());
-      setCurrentFloorSvgContent('');
-      return;
-    }
-
-    // Load SVG for all floors
-    const loadPromises = buildingData.floors.map(async (floor: any) => {
-      if (!floor.svgPath) return { floorId: floor.id, content: '' };
-      try {
-        const response = await fetch(floor.svgPath);
-        const content = await response.text();
-        return { floorId: floor.id, content };
-      } catch (err) {
-        console.error(`Failed to load SVG for floor ${floor.id}:`, err);
-        return { floorId: floor.id, content: '' };
-      }
-    });
-
-    Promise.all(loadPromises).then(results => {
-      const svgMap = new Map<string, string>();
-      results.forEach(({ floorId, content }) => {
-        if (content) svgMap.set(floorId, content);
-      });
-      setAllFloorSvgContent(svgMap);
-      console.log(`📄 Loaded SVG content for ${svgMap.size} floors`);
-    });
-  }, [indoorModeActive, buildingData]);
-
-  // PHASE 1: Clear indoor graph cache when exiting indoor mode
-  useEffect(() => {
-    if (!indoorModeActive) {
-      // Dynamically import and call cache clearing function
-      import('@/lib/indoorPathfinding').then(({ clearIndoorGraphCache }) => {
-        clearIndoorGraphCache();
-      });
-    }
-  }, [indoorModeActive]);
-
-  // Load building entrances for hybrid navigation
-  useEffect(() => {
-    async function loadBuildingEntrances() {
-      try {
-        const res = await fetch('/api/buildings/entrances');
-        const data = await res.json();
-        setBuildingEntrances(data.entrances || []);
-        console.log(`🚪 Loaded ${data.entrances?.length || 0} building entrances for hybrid navigation`);
-      } catch (error) {
-        console.error('Failed to load building entrances:', error);
-      }
-    }
-    loadBuildingEntrances();
-  }, []);
-
-  // Build hybrid graph when outdoor graph, building entrances, and indoor SVG are ready
-  useEffect(() => {
-    if (!pathGraph || buildingEntrances.length === 0 || allFloorSvgContent.size === 0) {
-      // Wait for all components to be loaded
-      console.log('⏳ Waiting for hybrid graph components:', {
-        pathGraph: !!pathGraph,
-        entrances: buildingEntrances.length,
-        floorSvg: allFloorSvgContent.size
-      });
-      return;
-    }
-
-    async function buildHybrid() {
-      try {
-        if (!pathGraph) {
-          console.error('pathGraph is null in buildHybrid');
-          return;
-        }
-
-        console.log('🔧 Building hybrid navigation graph...');
-        console.log('  - Outdoor graph:', Object.keys(pathGraph.nodesById).length, 'nodes');
-        console.log('  - Building entrances:', buildingEntrances.length);
-        console.log('  - Indoor floors:', allFloorSvgContent.size);
-
-        // Convert outdoor graph to Map format expected by buildHybridGraph
-        // The outdoor graph uses adjacency list format, need to convert to edges Map
-        const outdoorGraphMap = new Map();
-        Object.entries(pathGraph.nodesById).forEach(([id, node]) => {
-          const edges = new Map();
-          // Convert adjacency list to edges Map
-          const adjacentEdges = pathGraph!.adjacency[id] || [];
-          adjacentEdges.forEach((edge: any) => {
-            // Edge property is 'to', not 'target'
-            edges.set(edge.to, edge.distance);
-          });
-
-          outdoorGraphMap.set(id, {
-            ...node,
-            edges,
-          });
-        });
-
-        // Build indoor graphs for each floor with SVG content
-        const indoorGraphs = new Map();
-
-        // Group SVG content by building
-        const buildingFloors = new Map<string, Array<{floorId: string; svgContent: string}>>();
-
-        // Get building info from entrances
-        const buildingIds = [...new Set(buildingEntrances.map(e => e.buildingId))];
-
-        for (const buildingId of buildingIds) {
-          const floors: Array<{floorId: string; svgContent: string}> = [];
-
-          // Find all floors for this building from entrances
-          const buildingEntranceFloors = buildingEntrances
-            .filter(e => e.buildingId === buildingId)
-            .map(e => e.floorId);
-
-          for (const floorId of new Set(buildingEntranceFloors)) {
-            const svgContent = allFloorSvgContent.get(floorId);
-            if (svgContent) {
-              floors.push({ floorId, svgContent });
-            }
-          }
-
-          if (floors.length > 0) {
-            buildingFloors.set(buildingId, floors);
-          }
-        }
-
-        console.log('  - Building indoor graphs for', buildingFloors.size, 'buildings...');
-
-        // Build indoor graph for each building using multi-floor pathfinding
-        for (const [buildingId, floors] of buildingFloors.entries()) {
-          try {
-            // Parse SVG paths for each floor
-            const { parseSvgPaths, buildMultiFloorGraph } = await import('@/lib/indoorPathfinding');
-
-            const floorData = floors.map(floor => {
-              const segments = parseSvgPaths(floor.svgContent);
-              return {
-                floorId: floor.floorId,
-                segments,
-                svgContent: floor.svgContent
-              };
-            });
-
-            const indoorGraph = buildMultiFloorGraph(floorData);
-            indoorGraphs.set(buildingId, indoorGraph);
-            console.log(`    ✓ Built indoor graph for building ${buildingId}:`, indoorGraph.size, 'nodes');
-          } catch (error) {
-            console.error(`    ✗ Failed to build indoor graph for building ${buildingId}:`, error);
-          }
-        }
-
-        const hybrid = await buildHybridGraph(
-          outdoorGraphMap,
-          buildingEntrances,
-          indoorGraphs
-        );
-
-        setHybridGraph(hybrid);
-        console.log('✅ Hybrid graph built:', hybrid.size, 'total nodes (outdoor + indoor + entrance portals)');
-      } catch (error) {
-        console.error('❌ Failed to build hybrid graph:', error);
-      }
-    }
-
-    buildHybrid();
-  }, [pathGraph, buildingEntrances, allFloorSvgContent]);
-
-  // Update current floor SVG when selected floor changes
-  useEffect(() => {
-    if (!selectedFloorId) {
-      setCurrentFloorSvgContent('');
-      return;
-    }
-    const content = allFloorSvgContent.get(selectedFloorId) || '';
-    setCurrentFloorSvgContent(content);
-  }, [selectedFloorId, allFloorSvgContent]);
-
-  // HYBRID NAVIGATION DETECTION: Check for outdoor ↔ indoor routes
-  useEffect(() => {
-    // Detect hybrid scenario: outdoor start + indoor destination OR indoor start + outdoor destination
-    const hasOutdoorStart = navigationStart && !indoorNavigationStart;
-    const hasIndoorDestination = indoorNavigationDestination && !navigationDestination;
-    const hasIndoorStart = indoorNavigationStart && !navigationStart;
-    const hasOutdoorDestination = navigationDestination && !indoorNavigationDestination;
-
-    if ((hasOutdoorStart && hasIndoorDestination) || (hasIndoorStart && hasOutdoorDestination)) {
-      console.log('🔀 HYBRID NAVIGATION DETECTED!');
-      console.log('  Start:', hasOutdoorStart ? `Outdoor (${navigationStart?.name})` : `Indoor (${indoorNavigationStart?.name})`);
-      console.log('  Destination:', hasIndoorDestination ? `Indoor (${indoorNavigationDestination?.name})` : `Outdoor (${navigationDestination?.name})`);
-
-      // Trigger hybrid pathfinding
-      if (hybridGraph) {
-        async function calculateHybridRoute() {
-          try {
-            if (!hybridGraph) {
-              console.error('hybridGraph is null');
-              return;
-            }
-
-            const start = hasOutdoorStart
-              ? { lat: navigationStart!.lat, lng: navigationStart!.lng }
-              : { buildingId: indoorNavigationStart!.buildingId, floorId: indoorNavigationStart!.floorId, x: indoorNavigationStart!.x, y: indoorNavigationStart!.y };
-
-            const end = hasIndoorDestination
-              ? { buildingId: indoorNavigationDestination!.buildingId, floorId: indoorNavigationDestination!.floorId, x: indoorNavigationDestination!.x, y: indoorNavigationDestination!.y }
-              : { lat: navigationDestination!.lat, lng: navigationDestination!.lng };
-
-            console.log('🚀 Calling findHybridRoute...', { start, end });
-            const hybridRoute = await findHybridRoute(hybridGraph, start, end);
-
-            if (hybridRoute) {
-              console.log('✅ Hybrid route found!', hybridRoute);
-              setHybridRouteActive(true);
-              // TODO: Convert hybrid route to displayable format
-              // For now, just log the segments
-              hybridRoute.segments.forEach((seg, i) => {
-                console.log(`  Segment ${i + 1}: ${seg.type} (${seg.nodes.length} nodes, ${seg.distance.toFixed(1)}m)`);
-              });
-            } else {
-              console.error('❌ No hybrid route found');
-              setNavigationErrorMessage('Could not find a route between outdoor and indoor locations.');
-              setShowNavigationError(true);
-            }
-          } catch (error) {
-            console.error('❌ Hybrid pathfinding error:', error);
-            setNavigationErrorMessage('Error calculating hybrid route: ' + error);
-            setShowNavigationError(true);
-          }
-        }
-
-        calculateHybridRoute();
-      } else {
-        console.warn('⚠️ Hybrid graph not ready yet');
-      }
-    }
-  }, [navigationStart, navigationDestination, indoorNavigationStart, indoorNavigationDestination, hybridGraph]);
-
-  // Calculate indoor route when start and destination are set
-  useEffect(() => {
-    if (!indoorNavigationStart || !indoorNavigationDestination || allFloorSvgContent.size === 0) {
-      setIndoorRoute(null);
-      return;
-    }
-
-    console.log('🗺️  Calculating indoor route from', indoorNavigationStart.name, 'to', indoorNavigationDestination.name);
-
-    // Check if on same floor - use single-floor pathfinding
-    if (indoorNavigationStart.floorId === indoorNavigationDestination.floorId) {
-      const floorSvg = allFloorSvgContent.get(indoorNavigationStart.floorId);
-      if (!floorSvg) {
-        console.error('Floor SVG not loaded');
-        setIndoorRoute(null);
-        return;
-      }
-
-      const result = findPathBetweenPOIs(
-        floorSvg,
-        { x: indoorNavigationStart.x, y: indoorNavigationStart.y },
-        { x: indoorNavigationDestination.x, y: indoorNavigationDestination.y }
-      );
-
-      if (result) {
-        // Add floor ID to each node
-        const nodesWithFloor = result.nodes.map(node => ({
-          ...node,
-          floorId: indoorNavigationStart.floorId,
-        }));
-        setIndoorRoute(nodesWithFloor);
-        console.log('✅ Single-floor route calculated:', nodesWithFloor.length, 'nodes');
-      } else {
-        setIndoorRoute(null);
-        console.warn('❌ Could not find single-floor route');
-      }
-    } else {
-      // Multi-floor pathfinding
-      console.log('🪜 Using multi-floor pathfinding');
-
-      const floors = Array.from(allFloorSvgContent.entries()).map(([floorId, svgContent]) => ({
-        floorId,
-        svgContent,
-      }));
-
-      findMultiFloorPath(
-        floors,
-        {
-          x: indoorNavigationStart.x,
-          y: indoorNavigationStart.y,
-          floorId: indoorNavigationStart.floorId,
-        },
-        {
-          x: indoorNavigationDestination.x,
-          y: indoorNavigationDestination.y,
-          floorId: indoorNavigationDestination.floorId,
-        }
-      ).then(result => {
-        if (result) {
-          setIndoorRoute(result.nodes);
-          console.log('✅ Multi-floor route calculated:', result.nodes.length, 'nodes');
-        } else {
-          setIndoorRoute(null);
-          console.warn('❌ Could not find multi-floor route');
-        }
-      }).catch(err => {
-        console.error('Multi-floor pathfinding error:', err);
-        setIndoorRoute(null);
-      });
-    }
-  }, [indoorNavigationStart, indoorNavigationDestination, allFloorSvgContent]);
-
-  // Load places, deals, and events on mount
-
-  useEffect(() => {
-
-    (async () => {
-
-      // Calibration is set up in CustomSydneyMap.tsx via setCalibration()
-
-      // coordinateMapper.ts will use the affine transform from CONTROL_POINTS
-
-      console.log('✅ GPS coordinate mapping configured (calibration set in CustomSydneyMap)');
-
-
-
-      const [placesRes, dealsRes, eventsRes, zoomConfigRes] = await Promise.all([
-
-        fetch('/api/places').then(r => r.json()),
-
-        fetch('/api/deals').then(r => r.json()),
-
-        fetch('/api/events').then(r => r.json()),
-
-        fetch('/api/map-settings').then(r => r.json()).catch(() => ({
-          initial: 2.5,
-          placeStart: 2.8,
-          destination: 2.8,
-          navigation: 3.0,
-        })),
-
-      ]);
-
-
-
-      // Validate API responses before using them
-      if (!Array.isArray(placesRes)) {
-        console.error('❌ Failed to load places from API:', placesRes);
-        setAllPlaces([]);
-        setFilteredPlaces([]);
-        setVisibleBusinesses([]);
-        return;
-      }
-
-      if (!Array.isArray(dealsRes)) {
-        console.error('❌ Failed to load deals from API:', dealsRes);
-        setAllDeals([]);
-      }
-
-      if (!Array.isArray(eventsRes)) {
-        console.error('❌ Failed to load events from API:', eventsRes);
-        setAllEvents([]);
-      }
-
-      console.log("DEBUG allPlaces from DB:", placesRes.length);
-
-      const rawPlaces = placesRes as Business[];
-
-      const normalizedPlaces = rawPlaces.map((place) => ({
-
-        ...place,
-
-        lat: normalizeLatitude(place.lat),
-
-        lng: normalizeLongitude(place.lng),
-
-      }));
-
-      const correctedCount = rawPlaces.reduce((count, place, idx) => {
-
-        const normalized = normalizedPlaces[idx];
-
-        return count + (normalized.lat !== place.lat || normalized.lng !== place.lng ? 1 : 0);
-      }, 0);
-
-      if (correctedCount > 0) {
-
-        console.warn(`[GeoNormalize] Corrected ${correctedCount} place coordinate pairs from API payload`);
-
-      }
-
-
-
-
-
-      setAllPlaces(normalizedPlaces);
-
-      setAllDeals(Array.isArray(dealsRes) ? dealsRes as Deal[] : []);
-
-      setAllEvents(Array.isArray(eventsRes) ? eventsRes as Event[] : []);
-
-      setZoomConfig(zoomConfigRes as ZoomConfig);
-
-      setFilteredPlaces(normalizedPlaces); // initial view = all
-
-      setVisibleBusinesses(normalizedPlaces); // Show all businesses on map
-
-
-
-      console.log('📊 Data loaded:', {
-
-        places: normalizedPlaces.length,
-
-        deals: dealsRes.length,
-
-        events: eventsRes.length,
-
-        zoomConfig: zoomConfigRes
-
-      });
-
-    })();
-
-  }, []);
-
+    navigation.setSelectedIndoorPOI(poi);
+  }, [navigation]);
+
+  // REMOVED: Indoor SVG loading - now handled by IndoorNavigation component
+  // REMOVED: Graph cache clearing - now handled by IndoorNavigation component  
+  // REMOVED: Building entrances loading - now handled by IndoorNavigation component
+  // REMOVED: Hybrid graph building - now handled by IndoorNavigation component
+  // REMOVED: Floor SVG updates - now handled by IndoorNavigation component
+
+  // REMOVED: Hybrid navigation detection - now handled by IndoorNavigation component
+  // REMOVED: Indoor route calculation - now handled by IndoorNavigation component
+  // REMOVED: Data loading (places, deals, events, zoom config) - now handled by AppProvider
+  
   // Handle shared POI link (e.g., ?poi=business-id)
   useEffect(() => {
     if (allPlaces.length === 0) return;
@@ -998,760 +450,16 @@ export default function Page() {
     if (poiId) {
       const poi = allPlaces.find(place => place.id === poiId);
       if (poi) {
-        setSelected(poi);
+        map.setSelected(poi);
         // Clean up URL without reloading page
         window.history.replaceState({}, '', window.location.pathname);
       }
     }
-  }, [allPlaces]);
-
-  // Comprehensive filtering logic: keyword + category + tab + nearMe
-
-  useEffect(() => {
-
-    let result = [...allPlaces];
-
-
-
-    // Keyword filter (simple, case-insensitive)
-
-    if (keyword.trim()) {
-
-      const q = keyword.toLowerCase();
-
-      result = result.filter(place =>
-
-        place.name.toLowerCase().includes(q) ||
-
-        (place.category?.toLowerCase().includes(q))
-
-      );
-
-    }
-
-
-
-    // Category filter - exact match
-
-    if (selectedCategory !== "All categories") {
-
-      result = result.filter(place => place.category === selectedCategory);
-
-      console.log('📂 Filtered by category:', selectedCategory, '→', result.length, 'places');
-
-    }
-
-
-
-    // Tab filter - multi-select toggle tabs (Deals, Events, Experiences)
-    // If no tabs active, show all. If one or more active, show places matching ANY active tab.
-
-    if (activeTabs.size > 0) {
-
-      // Define filter criteria for each tab type
-      const placeIdsWithDeals = new Set(allDeals.map(deal => deal.placeId));
-      const dealTags = ['deal', 'deals', 'discount', 'offer', 'promotion', 'sale', 'special'];
-      const dealCategories = ['cafe', 'restaurant', 'food & drink', 'food court', 'thai', 'chinese', 'japanese', 'malaysian', 'coffee'];
-
-      const placeIdsWithEvents = new Set(
-        allEvents.filter(event => event.placeId).map(event => event.placeId!)
-      );
-      const eventTags = ['event', 'events', 'live', 'show', 'concert', 'performance', 'venue', 'theatre'];
-      const eventCategories = ['venue', 'theatre', 'theater', 'bar', 'pub', 'club', 'music', 'entertainment'];
-
-      const experienceTags = ['experience', 'experiences', 'tour', 'activity', 'attraction', 'museum', 'gallery', 'landmark', 'heritage', 'historic', 'shopping'];
-      const experienceCategories = ['experiences', 'attraction', 'museum', 'gallery', 'shopping', 'shopping center', 'landmark', 'park', 'garden'];
-
-      result = result.filter(place => {
-        const placeTags = (place.tags || []).map(t => t.toLowerCase());
-        const category = (place.category || '').toLowerCase();
-
-        // Check if place matches ANY active tab (OR logic)
-        if (activeTabs.has('deals')) {
-          if (placeIdsWithDeals.has(place.id)) return true;
-          if (dealTags.some(tag => placeTags.includes(tag))) return true;
-          if (dealCategories.some(cat => category.includes(cat))) return true;
-        }
-
-        if (activeTabs.has('events')) {
-          if (placeIdsWithEvents.has(place.id)) return true;
-          if (eventTags.some(tag => placeTags.includes(tag))) return true;
-          if (eventCategories.some(cat => category.includes(cat))) return true;
-        }
-
-        if (activeTabs.has('experiences')) {
-          if (experienceTags.some(tag => placeTags.includes(tag))) return true;
-          if (experienceCategories.some(cat => category.includes(cat))) return true;
-        }
-
-        return false;
-      });
-
-      console.log('🏷️ Filtered by active tabs:', Array.from(activeTabs), '→', result.length, 'places');
-
-    }
-
-
-
-    // Near me filter (if enabled and user location available)
-
-    if (nearMeOnly && userLocation) {
-
-      const RADIUS_METERS = 800;
-
-
-
-      result = result
-
-        .map(place => {
-
-          const distance = calculateDistance(
-
-            { lat: userLocation.lat, lng: userLocation.lng },
-
-            { lat: place.lat, lng: place.lng }
-
-          );
-
-          return { place, distance };
-
-        })
-
-        .filter(item => item.distance <= RADIUS_METERS)
-
-        .sort((a, b) => a.distance - b.distance)
-
-        .map(item => item.place);
-
-    }
-
-
-
-    setFilteredPlaces(result);
-
-    setVisibleBusinesses(result); // Show all filtered businesses on map
-
-  }, [allPlaces, allDeals, allEvents, keyword, selectedCategory, activeTabs, nearMeOnly, userLocation]);
-
-
-  // PHASE 1: Throttled GPS processing function to reduce overhead
-  // useMemo creates a stable throttled function that won't change on every render
-  const processGPSUpdate = useMemo(
-    () => throttle(
-      (pos: GeolocationPosition) => {
-        // Skip GPS updates if we're in mock arrival mode
-        if (mockArrivedLocation) {
-          console.log('📍 GPS update skipped - mock arrival mode active');
-          return;
-        }
-
-        const fresh: DeviceLocation = {
-
-          lat: pos.coords.latitude,
-
-          lng: pos.coords.longitude,
-
-          accuracy: pos.coords.accuracy,
-
-          heading: pos.coords.heading,
-
-          speed: pos.coords.speed,
-
-          timestamp: pos.timestamp,
-
-        };
-
-
-
-        // GPS FILTERING: Reject low-accuracy readings to prevent jumps
-
-        // PHASE 1 OPTIMIZATION: Balanced accuracy filter for urban/indoor environments
-
-        // UPDATED: Relaxed from 30m to 50m to reduce location jumping in urban areas
-
-        const MAX_ACCURACY = parseInt(process.env.NEXT_PUBLIC_GPS_MAX_ACCURACY || '50', 10); // meters - relaxed for better position continuity
-
-        if (!simulateAtQvb && fresh.accuracy && fresh.accuracy > MAX_ACCURACY) {
-
-          console.warn('⚠️ GPS accuracy too low, ignoring:', fresh.accuracy.toFixed(1) + 'm (max: ' + MAX_ACCURACY + 'm)');
-
-          return;
-
-        }
-
-
-
-        // GPS FILTERING: Reject unrealistic position jumps (teleportation detection)
-
-        // RELAXED: Account for GPS update delays (maximumAge: 3000ms) and allow faster movement
-
-        if (lastShownRef.current && !simulateAtQvb) {
-
-          const distanceFromLast = calculateDistance(
-
-            lastShownRef.current,
-
-            { lat: fresh.lat, lng: fresh.lng }
-
-          );
-
-          const timeDelta = ((fresh.timestamp || 0) - (lastShownRef.current.timestamp || 0)) / 1000; // seconds
-
-          // UPDATED: Relaxed from 2.5 to 3.5 m/s to allow faster GPS position corrections
-
-          const MAX_WALKING_SPEED = parseFloat(process.env.NEXT_PUBLIC_GPS_MAX_WALKING_SPEED || '3.5'); // m/s (~12.6 km/h) - allows GPS corrections and fast walking
-
-
-
-          if (timeDelta > 0 && distanceFromLast / timeDelta > MAX_WALKING_SPEED) {
-
-            console.warn('⚠️ GPS jump detected (too fast), ignoring:', {
-
-              distance: distanceFromLast.toFixed(1) + 'm',
-
-              time: timeDelta.toFixed(1) + 's',
-
-              speed: (distanceFromLast / timeDelta).toFixed(1) + 'm/s',
-
-              maxAllowed: MAX_WALKING_SPEED + 'm/s'
-
-            });
-
-            return;
-
-          }
-
-        }
-
-
-
-        setRawLocation(fresh);
-
-        let shown = simulateAtQvb ? createMockQvbLocation() : fresh;
-
-
-
-        // Log successful GPS acquisition for debugging
-
-        // PERFORMANCE: Disabled frequent GPS logging to prevent mobile lag
-
-        // console.log('✅ GPS location accepted:', {
-
-        //   lat: fresh.lat.toFixed(6),
-
-        //   lng: fresh.lng.toFixed(6),
-
-        //   accuracy: fresh.accuracy ? fresh.accuracy.toFixed(1) + 'm' : 'unknown',
-
-        //   heading: fresh.heading !== null && fresh.heading !== undefined ? fresh.heading.toFixed(1) + '°' : 'none'
-
-        // });
-
-
-
-        // Derive heading if none provided using last position
-
-        // High-quality heading: prefer device; otherwise derive and smooth
-
-        let derivedHeading: number | null = null;
-
-        if (typeof shown.heading !== 'number' || Number.isNaN(shown.heading)) {
-
-          if (lastShownRef.current) {
-
-            const delta = calculateDistance(lastShownRef.current, { lat: shown.lat, lng: shown.lng });
-
-            if (delta > 0.8) {
-
-              derivedHeading = computeBearingDegrees(lastShownRef.current, { lat: shown.lat, lng: shown.lng });
-
-            }
-
-          }
-
-        } else {
-
-          derivedHeading = shown.heading ?? null;
-
-        }
-
-        // TELEPORT QVB: Bypass heading smoothing when simulating
-        if (!simulateAtQvb && derivedHeading !== null) {
-
-          const currentHeading = lastHeadingRef.current ?? derivedHeading;
-
-          const speed = shown.speed ?? 0;
-
-
-
-          // Check if heading update should be applied (movement threshold)
-
-          if (shouldUpdateHeading(
-
-            speed,
-
-            currentHeading,
-
-            derivedHeading,
-
-            SMOOTHING.SPEED_STATIONARY_THRESHOLD,
-
-            SMOOTHING.HEADING_MIN_CHANGE_STATIONARY
-
-          )) {
-
-            const smoothed = angularLerp(currentHeading, derivedHeading, smoothAlphaRef.current);
-
-            shown = { ...shown, heading: smoothed };
-
-            lastHeadingRef.current = smoothed;
-
-            // PERFORMANCE: Disabled frequent GPS heading logging to prevent mobile lag
-
-            // console.log('📍 GPS heading updated:', {
-
-            //   raw: derivedHeading.toFixed(1),
-
-            //   smoothed: smoothed.toFixed(1),
-
-            //   speed: speed.toFixed(2),
-
-            //   moving: speed > SMOOTHING.SPEED_STATIONARY_THRESHOLD
-
-            // });
-
-          } else {
-
-            // Keep previous heading to prevent jitter
-
-            shown = { ...shown, heading: currentHeading };
-
-            // console.log('📍 Keeping previous GPS heading - change too small');
-
-          }
-
-        } else if (simulateAtQvb && derivedHeading !== null) {
-          // Apply heading directly without smoothing for teleport
-          shown = { ...shown, heading: derivedHeading };
-          lastHeadingRef.current = derivedHeading;
-        }
-
-        // GPS SMOOTHING: Apply position smoothing to reduce jitter
-        // TELEPORT QVB: Bypass position smoothing when simulating
-        // IMPORTANT: Keep smoothing light to preserve actual position for wrong turn detection
-
-        if (!simulateAtQvb && lastShownRef.current) {
-
-          const speed = shown.speed ?? 0;
-
-          const isStationary = speed < SMOOTHING.SPEED_STATIONARY_THRESHOLD;
-
-          const isWalking = speed >= SMOOTHING.SPEED_STATIONARY_THRESHOLD && speed < SMOOTHING.SPEED_WALKING_MAX;
-
-
-
-          if (isStationary) {
-
-            // More aggressive smoothing when standing still to reduce jitter
-
-            shown = {
-
-              ...shown,
-
-              lat: lastShownRef.current.lat + (shown.lat - lastShownRef.current.lat) * SMOOTHING.POSITION_STATIONARY_ALPHA,
-
-              lng: lastShownRef.current.lng + (shown.lng - lastShownRef.current.lng) * SMOOTHING.POSITION_STATIONARY_ALPHA,
-
-            };
-
-            // console.log('📍 Position smoothed (stationary)');
-
-          } else if (isWalking) {
-
-            // Light smoothing when walking - preserve actual position for wrong turn detection
-
-            shown = {
-
-              ...shown,
-
-              lat: lastShownRef.current.lat + (shown.lat - lastShownRef.current.lat) * SMOOTHING.POSITION_WALKING_ALPHA,
-
-              lng: lastShownRef.current.lng + (shown.lng - lastShownRef.current.lng) * SMOOTHING.POSITION_WALKING_ALPHA,
-
-            };
-
-            // console.log('📍 Position smoothed (walking)');
-
-          }
-
-          // No smoothing when moving faster - show real position immediately
-
-        }
-
-
-
-        // PHASE 6: Apply Kalman filter for smoother GPS tracking
-        const useKalmanFilter = process.env.NEXT_PUBLIC_USE_KALMAN_FILTER !== 'false';
-        if (useKalmanFilter && !simulateAtQvb) {
-          const kalmanManager = getKalmanFilterManager();
-          const filtered = kalmanManager.processGPS(
-            shown.lat,
-            shown.lng,
-            shown.accuracy,
-            shown.heading ?? undefined
-          );
-
-          // Use filtered coordinates
-          shown = {
-            ...shown,
-            lat: filtered.lat,
-            lng: filtered.lng
-          };
-
-          // console.log('🎯 Kalman filter applied');
-        }
-
-        lastShownRef.current = { lat: shown.lat, lng: shown.lng, timestamp: shown.timestamp };
-
-        setUserLocation(shown);
-
-        // Check if user is within map bounds; if far, show modal once
-
-        const here = { lat: shown.lat, lng: shown.lng };
-
-        if (!isWithinMapBounds(here)) {
-
-          setShowOutOfArea(true);
-
-        } else {
-
-          // User is back within bounds - hide the modal
-
-          setShowOutOfArea(false);
-
-          // Google Maps style: Always default start to "My location" when GPS is available
-          // This auto-sets on initial load and resets after clearing navigation
-          // User can still manually override to a different start point
-          if (!navigationStart) {
-            const myLocationBusiness: Business = {
-              id: 'my-location',
-              name: 'My location',
-              category: 'Current Position',
-              lat: shown.lat,
-              lng: shown.lng,
-            };
-            setNavigationStart(myLocationBusiness);
-            console.log('📍 Auto-set start to "My location" (Google Maps style)');
-          }
-
-        }
-
-        // Update instruction if active
-
-        if (turnByTurnActive && activeRoute) {
-
-          const graph = (window as any).__SYD_GRAPH__ as import('@/types').PathGraph;
-          const res = getNextInstruction(activeRoute, here, graph);
-
-          setCurrentInstruction(res.text);
-
-          if (res.reachedDestination) {
-
-            setTurnByTurnActive(false);
-
-          }
-
-          // Don't auto-center - let user pan freely and use recenter button when needed
-
-        }
-
-
-
-        // IMPROVED NAV MARKER CALCULATION - Google Maps style
-
-        if (activeRoute && activeRoute.length >= 2) {
-
-          try {
-
-            // If start point is NOT "my-location", keep marker at route start during turn-by-turn
-            // This handles the case where user selects a POI as start point for demo purposes
-            if (turnByTurnActive && navigationStart && navigationStart.id !== 'my-location') {
-              const startPoint = activeRoute[0];
-              const nextPoint = activeRoute[1];
-
-              // Use device heading if available, otherwise use route direction
-              let angleDeg: number;
-              if (typeof shown.heading === 'number' && !Number.isNaN(shown.heading)) {
-                angleDeg = shown.heading - 90; // Convert GPS heading to SVG rotation
-              } else {
-                const dx = nextPoint.x - startPoint.x;
-                const dy = nextPoint.y - startPoint.y;
-                angleDeg = (Math.atan2(dy, dx) * 180) / Math.PI;
-              }
-
-              const marker = { x: startPoint.x, y: startPoint.y, angleDeg };
-              navMarkerRef.current = marker;
-              setNavMarker(marker);
-              return; // Skip the normal position tracking
-            }
-
-            // Convert user position to SVG coordinates ONCE (not in loop!)
-
-            const userSvgPos = projectLatLng(shown.lat, shown.lng);
-
-
-
-            // Find nearest SEGMENT (not just nearest point)
-
-            let bestSegIdx = 0;
-
-            let bestDistToSegment = Infinity;
-
-
-
-            for (let i = 0; i < activeRoute.length - 1; i++) {
-
-              const a = activeRoute[i];
-
-              const b = activeRoute[i + 1];
-
-
-
-              // Calculate distance from user to this segment
-
-              const abx = b.x - a.x;
-
-              const aby = b.y - a.y;
-
-              const apx = userSvgPos.x - a.x;
-
-              const apy = userSvgPos.y - a.y;
-
-              const abLen2 = Math.max(1, abx * abx + aby * aby);
-
-              let t = (apx * abx + apy * aby) / abLen2;
-
-              t = Math.max(0, Math.min(1, t));
-
-
-
-              // Point on segment closest to user
-
-              const projX = a.x + t * abx;
-
-              const projY = a.y + t * aby;
-
-
-
-              // Distance from user to this projected point
-
-              const distToSeg = Math.hypot(userSvgPos.x - projX, userSvgPos.y - projY);
-
-
-
-              if (distToSeg < bestDistToSegment) {
-
-                bestDistToSegment = distToSeg;
-
-                bestSegIdx = i;
-
-              }
-
-            }
-
-
-
-            // Now project onto the best segment
-
-            const a = activeRoute[bestSegIdx];
-
-            const b = activeRoute[bestSegIdx + 1];
-
-
-
-            const abx = b.x - a.x;
-
-            const aby = b.y - a.y;
-
-            const apx = userSvgPos.x - a.x;
-
-            const apy = userSvgPos.y - a.y;
-
-            const abLen2 = Math.max(1, abx * abx + aby * aby);
-
-            let t = (apx * abx + apy * aby) / abLen2;
-
-
-
-            // Allow slight extension beyond segment endpoints for smoother tracking
-
-            t = Math.max(-0.1, Math.min(1.1, t));
-
-
-
-            const projX = a.x + t * abx;
-
-            const projY = a.y + t * aby;
-
-
-
-            // Calculate angle: Use device heading if available, otherwise use route direction
-            // UX ENHANCEMENT: Use device heading (gyro/compass) for better navigation UX
-
-            let angleDeg: number;
-
-            const useDeviceHeading = process.env.NEXT_PUBLIC_USE_DEVICE_HEADING_POINTER !== 'false';
-
-            if (useDeviceHeading && effectiveHeading !== null && !Number.isNaN(effectiveHeading)) {
-
-              // Use combined device heading (GPS + compass/gyro) for where user is facing
-
-              // GPS heading is 0° = North, 90° = East, 180° = South, 270° = West
-
-              // SVG rotation: 0° = East, 90° = South, 180° = West, 270° = North
-
-              // Convert GPS heading to SVG rotation: subtract 90° to align North with upward
-
-              angleDeg = effectiveHeading - 90;
-
-              // console.log('🧭 Navigation pointer using device heading:', effectiveHeading.toFixed(1) + '°');
-
-            } else {
-
-              // Fallback: Use route segment direction when heading unavailable (stationary)
-
-              const angleRad = Math.atan2(aby, abx);
-
-              angleDeg = (angleRad * 180) / Math.PI;
-
-              // console.log('📍 Navigation pointer using route direction (no heading available)');
-
-            }
-
-
-
-            // OFF-ROUTE DETECTION: Only active when turn-by-turn is enabled
-            // For walking, we allow some deviation but detect clear wrong turns
-
-            const OFF_ROUTE_THRESHOLD = 200; // meters - increased for demo with simulated locations
-
-            const distanceInMeters = bestDistToSegment * 0.1; // Approximate conversion from SVG units to meters
-
-
-
-            setDistanceFromRoute(distanceInMeters);
-
-
-
-            // Only check off-route when turn-by-turn is active (not during preview)
-            if (turnByTurnActive) {
-              if (distanceInMeters > OFF_ROUTE_THRESHOLD) {
-
-                if (!isOffRoute) {
-
-                  console.warn('⚠️ USER WENT OFF ROUTE! Distance:', distanceInMeters.toFixed(1) + 'm');
-
-                  setIsOffRoute(true);
-
-                }
-
-              } else {
-
-                if (isOffRoute) {
-
-                  console.log('✅ User back on route');
-
-                  setIsOffRoute(false);
-
-                }
-
-              }
-            } else {
-              // Clear off-route state when not in turn-by-turn mode
-              if (isOffRoute) {
-                setIsOffRoute(false);
-              }
-            }
-
-
-
-            const newMarker = { x: projX, y: projY, angleDeg };
-
-            navMarkerRef.current = newMarker;
-
-            setNavMarker(newMarker);
-
-
-
-            // Update remaining route (Google Maps style - only show route ahead)
-
-            // Include current segment point + all segments from current position onwards
-
-            const remaining = [
-
-              { ...a, x: projX, y: projY }, // Current position on route
-
-              ...activeRoute.slice(bestSegIdx + 1) // All remaining points
-
-            ];
-
-            setRemainingRoute(remaining);
-
-            setRouteProgress(bestSegIdx / (activeRoute.length - 1));
-
-
-
-            // Removed verbose logging for performance
-
-          } catch (err) {
-
-            console.error('Nav marker calculation error:', err);
-
-          }
-
-        } else {
-
-          setNavMarker(null);
-
-          navMarkerRef.current = null;
-
-          setRemainingRoute(null);
-
-          setRouteProgress(0);
-
-        }
-
-      },
-      parseInt(process.env.NEXT_PUBLIC_GPS_THROTTLE_MS || '1000', 10) // PHASE 1: Throttle to max 1 update per second
-    ),
-    [mockArrivedLocation, simulateAtQvb, activeRoute, projectLatLng, turnByTurnActive, navigationStart]
-  );
-
-  useEffect(() => {
-
-    if (!navigator.geolocation) return;
-
-    const watchId = navigator.geolocation.watchPosition(
-
-      processGPSUpdate,
-
-      (error) => {
-
-        console.error('Geolocation error:', error);
-
-      },
-
-      {
-        enableHighAccuracy: true,
-        maximumAge: parseInt(process.env.NEXT_PUBLIC_GPS_MAXIMUM_AGE || '5000', 10),  // PHASE 1: Increased to 5000ms to reduce update frequency
-        timeout: 15000
-      }
-
-    );
-
-    return () => navigator.geolocation.clearWatch(watchId);
-
-  }, [processGPSUpdate]); // PHASE 1: Simplified dependencies - processGPSUpdate includes all needed deps
+  }, [allPlaces, map]);
+
+  // REMOVED: GPS processing (~520 lines) - now handled by GPSTracker component
+  // REMOVED: Nav marker calculation - now handled by NavigationEngine component
+  // REMOVED: GPS watching useEffect - now handled by GPSTracker component
 
 
 
@@ -1759,10 +467,14 @@ export default function Page() {
 
   useEffect(() => {
 
-    if (!navMarker) {
+    if (!navigation.navMarker) {
       setSmoothNavMarker(null);
+      navMarkerRef.current = null;
       return;
     }
+
+    // Sync the ref with the navigation context value
+    navMarkerRef.current = navigation.navMarker;
 
     // Optimized animation - only update when there's significant change
     let animationFrame: number;
@@ -1807,7 +519,7 @@ export default function Page() {
 
     animationFrame = requestAnimationFrame(animate);
 
-    
+
 
     return () => {
 
@@ -1815,7 +527,7 @@ export default function Page() {
 
     };
 
-  }, [navMarker]);
+  }, [navigation.navMarker]);
 
 
 
@@ -1967,7 +679,7 @@ export default function Page() {
 
         lastCompassUpdateRef.current = now;
 
-        setCompassHeading(smoothedHeading);
+        location.setCompassHeading(smoothedHeading);
 
       };
 
@@ -2035,16 +747,16 @@ export default function Page() {
 
   useEffect(() => {
 
-    if (!turnByTurnActive || !activeRoute) return;
+    if (!navigation.turnByTurnActive || !navigation.activeRoute) return;
 
-    const here = userLocation ? { lat: userLocation.lat, lng: userLocation.lng } : undefined;
+    const here = location.userLocation ? { lat: location.userLocation.lat, lng: location.userLocation.lng } : undefined;
 
     const graph = (window as any).__SYD_GRAPH__ as import('@/types').PathGraph;
-    const msg = getNextInstruction(activeRoute, here, graph).text;
+    const msg = getNextInstruction(navigation.activeRoute, here, graph).text;
 
-    setCurrentInstruction(msg);
+    navigation.updateInstruction(msg);
 
-  }, [turnByTurnActive, activeRoute, userLocation]);
+  }, [navigation.turnByTurnActive, navigation.activeRoute, location.userLocation, navigation]);
 
 
 
@@ -2061,7 +773,7 @@ export default function Page() {
         const g = await buildPathNetwork();
 
         (window as any).__SYD_GRAPH__ = g;
-        setPathGraph(g);
+        navigation.setPathGraph(g);
 
         const totalEdges = Object.values(g.adjacency).reduce((a, b) => a + b.length, 0);
         const edgesWithStreets = Object.values(g.adjacency).flat().filter(e => e.street).length;
@@ -2088,7 +800,7 @@ export default function Page() {
 
       } else {
         // Graph already loaded, just set the state
-        setPathGraph((window as any).__SYD_GRAPH__);
+        navigation.setPathGraph((window as any).__SYD_GRAPH__);
       }
 
     })();
@@ -2103,41 +815,21 @@ export default function Page() {
 
     console.log('🧹 Clearing all navigation state');
 
-    setNavigationStart(null);
+    // Clear navigation context state
+    navigation.clearAllNavigation();
 
-    setNavigationDestination(null);
-
-    setActiveRoute(null);
-
-    setRemainingRoute(null);
-
-    setRouteProgress(0);
-
-    setNavigationActive(false);
-
-    setTurnByTurnActive(false);
-
-    setCurrentInstruction('');
-
-    setNavMarker(null);
-
+    // Clear local component state
     setSmoothNavMarker(null);
 
     navMarkerRef.current = null;
 
-    setIsOffRoute(false);
-
-    setDistanceFromRoute(0);
-
-    setShowNavigationError(false);
-
     // Reset map rotation to north-up
-    setMapRotation(0);
+    map.setMapRotation(0);
     console.log('🧭 Map rotation reset to north-up (0°)');
 
     // Recenter on current location if available
-    if (userLocation) {
-      setCenterOnUserTick((t) => t + 1);
+    if (location.userLocation) {
+      map.setCenterOnUserTick((t) => t + 1);
       console.log('📍 Recentered on user location after clearing navigation');
     }
 
@@ -2151,8 +843,8 @@ export default function Page() {
     console.log('🎯 Mock arrival at:', destination.label);
 
     // Disable QVB simulation if active (we're now simulating arrival location instead)
-    if (simulateAtQvb) {
-      setSimulateAtQvb(false);
+    if (location.simulateAtQvb) {
+      location.setSimulateAtQvb(false);
       console.log('🔴 Disabled QVB simulation - now using mock arrival location');
     }
 
@@ -2165,11 +857,11 @@ export default function Page() {
       speed: 0,
       timestamp: Date.now(),
     };
-    setMockArrivedLocation(arrivedLocation);
-    setUserLocation(arrivedLocation);
+    location.setMockArrivedLocation(arrivedLocation);
+    location.setUserLocation(arrivedLocation);
 
     // Show arrival message
-    setShowArrivalMessage(true);
+    map.setShowArrivalMessage(true);
 
     // Clear navigation
     clearAllNavigation();
@@ -2183,30 +875,31 @@ export default function Page() {
       lat: destination.lat,
       lng: destination.lng,
     };
-    setNavigationStart(myLocationBusiness);
+    navigation.setNavigationStart(myLocationBusiness);
     console.log('📍 Updated navigation start to arrival location:', destination.label);
 
     // Center on new location
-    setCenterOnPoint({ lat: destination.lat, lng: destination.lng, tick: Date.now(), targetScale: 3.0 });
+    map.setCenterOnPoint({ lat: destination.lat, lng: destination.lng, tick: Date.now(), targetScale: 3.0 });
 
     // Hide message after 3 seconds
     setTimeout(() => {
-      setShowArrivalMessage(false);
+      map.setShowArrivalMessage(false);
     }, 3000);
   };
 
   // Combine GPS heading with compass heading (compass as fallback)
 
-  const effectiveHeading = userLocation?.heading ?? compassHeading ?? 0;
+  const effectiveHeading = location.userLocation?.heading ?? location.compassHeading ?? 0;
 
   // Update map rotation continuously during turn-by-turn navigation
   useEffect(() => {
-    if (turnByTurnActive && effectiveHeading !== null) {
+    if (navigation.turnByTurnActive && effectiveHeading !== null) {
       // Rotate map so heading points upward (Google Maps style)
-      setMapRotation(effectiveHeading);
-      console.log('🧭 Updating map rotation to heading:', effectiveHeading);
+      map.setMapRotation(effectiveHeading);
+      // PERFORMANCE: Disabled logging to prevent lag
+      // console.log('🧭 Updating map rotation to heading:', effectiveHeading);
     }
-  }, [effectiveHeading, turnByTurnActive]);
+  }, [effectiveHeading, navigation.turnByTurnActive, navigation, map]);
 
 
 
@@ -2324,7 +1017,7 @@ export default function Page() {
         algorithm: result.algorithm
       };
 
-      setPathfindingDiag(diagnostics);  // Store for debug overlay
+      navigation.setPathfindingDiag(diagnostics);  // Store for debug overlay
 
 
 
@@ -2332,15 +1025,13 @@ export default function Page() {
 
         const route = diagnostics.route;
 
-        setActiveRoute(route);
+        navigation.setActiveRoute(route);
 
-        setRemainingRoute(route);
+        // Note: remainingRoute and routeProgress are managed by the navigation reducer
 
-        setRouteProgress(0);
+        navigation.setNavigationActive(true);
 
-        setNavigationActive(true);
-
-        setShowNavigationError(false);
+        navigation.setShowNavigationError(false);
 
 
 
@@ -2362,7 +1053,7 @@ export default function Page() {
 
         const initialMarker = { x: startPoint.x, y: startPoint.y, angleDeg };
 
-        setNavMarker(initialMarker);
+        // Note: navMarker is managed by the NavigationEngine component
 
         navMarkerRef.current = initialMarker;
 
@@ -2376,16 +1067,16 @@ export default function Page() {
 
         // Handle turn-by-turn activation if requested
         if (options?.startTurnByTurn) {
-          setTurnByTurnActive(true);
+          navigation.setTurnByTurnActive(true);
           const graph = (window as any).__SYD_GRAPH__ as import('@/types').PathGraph;
-          const msg = getNextInstruction(route, userLocation ? { lat: userLocation.lat, lng: userLocation.lng } : undefined, graph).text;
-          setCurrentInstruction(msg);
+          const msg = getNextInstruction(route, location.userLocation ? { lat: location.userLocation.lat, lng: location.userLocation.lng } : undefined, graph).text;
+          navigation.updateInstruction(msg);
           // Set initial map rotation to current heading (Google Maps style)
-          const heading = userLocation?.heading ?? compassHeading ?? 0;
-          setMapRotation(heading);
+          const heading = location.userLocation?.heading ?? location.compassHeading ?? 0;
+          map.setMapRotation(heading);
           // Recenter on user to start turn-by-turn experience with configured zoom
-          if (userLocation) {
-            setCenterOnPoint({ lat: userLocation.lat, lng: userLocation.lng, tick: Date.now(), targetScale: zoomConfig?.navigationStart ?? 3.5 });
+          if (location.userLocation) {
+            map.setCenterOnPoint({ lat: location.userLocation.lat, lng: location.userLocation.lng, tick: Date.now(), targetScale: map.zoomConfig?.navigationStart ?? 3.5 });
           }
           console.log('🎯 Turn-by-turn navigation activated with rotation:', heading);
         }
@@ -2409,7 +1100,7 @@ export default function Page() {
 
     console.error('❌ No walkable route found between selected locations');
 
-    setNavigationErrorMessage(
+    navigation.setNavigationErrorMessage(
 
       'Unable to find a walkable route between these locations. ' +
 
@@ -2425,11 +1116,11 @@ export default function Page() {
 
     );
 
-    setShowNavigationError(true);
+    navigation.setShowNavigationError(true);
 
-    setNavigationActive(false);
+    navigation.setNavigationActive(false);
 
-    setActiveRoute(null);
+    navigation.setActiveRoute(null);
 
   };
 
@@ -2477,11 +1168,11 @@ export default function Page() {
 
     // Set destination
 
-    setNavigationDestination(cleanBusiness);
+    navigation.setNavigationDestination(cleanBusiness);
 
 
 
-    if (userLocation) {
+    if (location.userLocation) {
 
       // Create a pseudo-Business from user location
       // IMPORTANT: Use 'my-location' to match NavigationPanel's options id
@@ -2494,9 +1185,9 @@ export default function Page() {
 
         category: 'Current Position',
 
-        lat: userLocation.lat,
+        lat: location.userLocation.lat,
 
-        lng: userLocation.lng,
+        lng: location.userLocation.lng,
 
       };
 
@@ -2504,15 +1195,15 @@ export default function Page() {
 
       // Set start
 
-      setNavigationStart(userLocationBusiness);
+      navigation.setNavigationStart(userLocationBusiness);
 
 
 
       // Close modal
 
-      setShowLocationModal(false);
+      map.setShowLocationModal(false);
 
-      setSelected(null);
+      map.setSelected(null);
 
 
 
@@ -2528,9 +1219,9 @@ export default function Page() {
 
       console.warn("No userLocation available – please select a starting point or enable location.");
 
-      setShowLocationModal(false);
+      map.setShowLocationModal(false);
 
-      setSelected(null);
+      map.setSelected(null);
 
     }
 
@@ -2559,44 +1250,32 @@ export default function Page() {
     }
 
     handleExitAi();
-    setCenterOnPoint({ lat: place.lat, lng: place.lng, tick: Date.now(), targetScale: zoomConfig?.destination ?? 2.8 });
+    map.setCenterOnPoint({ lat: place.lat, lng: place.lng, tick: Date.now(), targetScale: map.zoomConfig?.destination ?? 2.8 });
     handleTakeMeThere(place);
-  }, [allPlaces, allDeals, allEvents, handleExitAi, handleTakeMeThere, zoomConfig]);
+  }, [allPlaces, allDeals, allEvents, handleExitAi, handleTakeMeThere, map]);
 
 
-  // Debug: Log what we're passing to the map
-
-  useEffect(() => {
-
-    console.log('🗺️ Map props:', {
-
-      hasActiveRoute: !!activeRoute,
-
-      activeRouteLength: activeRoute?.length,
-
-      hasSmoothNavMarker: !!smoothNavMarker,
-
-      smoothNavMarker: smoothNavMarker,
-
-      turnByTurnActive,
-
-      hasUserLocation: !!userLocation,
-
-      gpsHeading: userLocation?.heading,
-
-      compassHeading: compassHeading,
-
-      effectiveHeading: effectiveHeading
-
-    });
-
-  }, [activeRoute, smoothNavMarker, turnByTurnActive, userLocation, compassHeading, effectiveHeading]);
+  // Debug: Log what we're passing to the map (DISABLED for performance)
+  // PERFORMANCE: This was causing severe lag by logging on every GPS update
+  // useEffect(() => {
+  //   console.log('🗺️ Map props:', {
+  //     hasActiveRoute: !!navigation.activeRoute,
+  //     activeRouteLength: navigation.activeRoute?.length,
+  //     hasSmoothNavMarker: !!smoothNavMarker,
+  //     smoothNavMarker: smoothNavMarker,
+  //     turnByTurnActive: navigation.turnByTurnActive,
+  //     hasUserLocation: !!location.userLocation,
+  //     gpsHeading: location.userLocation?.heading,
+  //     compassHeading: location.compassHeading,
+  //     effectiveHeading: effectiveHeading
+  //   });
+  // }, [navigation.activeRoute, smoothNavMarker, navigation.turnByTurnActive, location.userLocation, location.compassHeading, effectiveHeading, navigation, location]);
 
   // Memoize business click handler to prevent unnecessary re-renders and event listener churn
   const handleBusinessClick = useCallback((business: Business) => {
-    setSelected(business);
-    setShowLocationModal(true);
-  }, []);
+    map.setSelected(business);
+    map.setShowLocationModal(true);
+  }, [map]);
 
   return (
 
@@ -2607,35 +1286,35 @@ export default function Page() {
       <div className="fixed inset-0 z-0">
 
         <CustomSydneyMap
-          businesses={visibleBusinesses}
-          selectedBusiness={selected}
-          userLocation={userLocation ? { ...userLocation, heading: effectiveHeading } : undefined}
+          businesses={search.filteredPlaces}
+          selectedBusiness={map.selected}
+          userLocation={location.userLocation ? { ...location.userLocation, heading: effectiveHeading } : undefined}
           onBusinessClick={handleBusinessClick}
-          activeRoute={remainingRoute || activeRoute}
+          activeRoute={navigation.remainingRoute || navigation.activeRoute}
 
-          onCenterOnUser={Boolean(centerOnUserTick)}
+          onCenterOnUser={Boolean(map.centerOnUserTick)}
 
-          onCenterOnPoint={centerOnPoint}
+          onCenterOnPoint={map.centerOnPoint}
 
-          smoothNavMarker={turnByTurnActive ? smoothNavMarker : null}
+          smoothNavMarker={navigation.turnByTurnActive ? smoothNavMarker : null}
 
-          navigationStart={navigationStart}
-          navigationDestination={navigationDestination}
-          showGraphOverlay={showGraphOverlay}
-          debugTransformLogTick={debugTransformLogTick}
-          zoomConfig={zoomConfig || undefined}
-          mapRotation={mapRotation}
-          turnByTurnActive={turnByTurnActive}
-          showPOIMarkers={activeTabs.size > 0}
-          indoorModeActive={indoorModeActive}
-          buildingData={buildingData}
-          selectedFloorId={selectedFloorId}
+          navigationStart={navigation.navigationStart}
+          navigationDestination={navigation.navigationDestination}
+          showGraphOverlay={map.showGraphOverlay}
+          debugTransformLogTick={map.debugTransformLogTick}
+          zoomConfig={map.zoomConfig || undefined}
+          mapRotation={map.mapRotation}
+          turnByTurnActive={navigation.turnByTurnActive}
+          showPOIMarkers={search.activeTabs.size > 0}
+          indoorModeActive={navigation.indoorModeActive}
+          buildingData={navigation.buildingData}
+          selectedFloorId={navigation.selectedFloorId}
           onExitIndoorMode={handleExitIndoorMode}
-          onFloorChange={setSelectedFloorId}
+          onFloorChange={navigation.setSelectedFloorId}
           onIndoorPOIClick={handleIndoorPOIClick}
-          indoorNavigationStart={indoorNavigationStart}
-          indoorNavigationDestination={indoorNavigationDestination}
-          indoorRoute={indoorRoute}
+          indoorNavigationStart={navigation.indoorNavigationStart}
+          indoorNavigationDestination={navigation.indoorNavigationDestination}
+          indoorRoute={navigation.indoorRoute}
         />
       </div>
 
@@ -2651,11 +1330,11 @@ export default function Page() {
 
           <button
 
-            className={`rounded px-3 py-2 text-xs shadow ${nearMeOnly ? 'bg-blue-600 text-white border-blue-700' : 'bg-white/90 hover:bg-white'}`}
+            className={`rounded px-3 py-2 text-xs shadow ${search.nearMeOnly ? 'bg-blue-600 text-white border-blue-700' : 'bg-white/90 hover:bg-white'}`}
 
             onClick={() => {
 
-              if (!nearMeOnly && !userLocation) {
+              if (!search.nearMeOnly && !location.userLocation) {
 
                 alert('⚠️ Location not available. Please enable GPS.');
 
@@ -2663,13 +1342,13 @@ export default function Page() {
 
               }
 
-              setNearMeOnly(!nearMeOnly);
+              search.setNearMeOnly(!search.nearMeOnly);
 
             }}
 
           >
 
-            {nearMeOnly ? '📍 Near Me' : '📍 Near Me'}
+            {search.nearMeOnly ? '📍 Near Me' : '📍 Near Me'}
 
           </button>
 
@@ -2703,18 +1382,18 @@ export default function Page() {
 
           <button
 
-            className={`rounded px-3 py-2 text-xs shadow ${simulateAtQvb ? 'bg-green-600 text-white border-green-700' : 'bg-white/90 hover:bg-white'}`}
+            className={`rounded px-3 py-2 text-xs shadow ${location.simulateAtQvb ? 'bg-green-600 text-white border-green-700' : 'bg-white/90 hover:bg-white'}`}
 
             onClick={() => {
 
-                console.log('[TeleportQVB] button clicked', { simulateAtQvb });
+                console.log('[TeleportQVB] button clicked', { simulateAtQvb: location.simulateAtQvb });
 
-                setDebugTransformLogTick(Date.now());
+                map.setDebugTransformLogTick(Date.now());
 
-                if (!simulateAtQvb) {
+                if (!location.simulateAtQvb) {
 
                   // Clear mock arrival mode when teleporting
-                  setMockArrivedLocation(null);
+                  location.setMockArrivedLocation(null);
 
                   // Find QVB by name or use fallback coordinates
 
@@ -2748,11 +1427,11 @@ export default function Page() {
 
                   };
 
-                  setUserLocation(shown);
+                  location.setUserLocation(shown);
 
-                  setCenterOnPoint({ lat: shown.lat, lng: shown.lng, tick: Date.now(), targetScale: 3.0 });
+                  map.setCenterOnPoint({ lat: shown.lat, lng: shown.lng, tick: Date.now(), targetScale: 3.0 });
 
-                  setShowOutOfArea(false); // Hide "out of area" modal when teleporting
+                  map.setShowOutOfArea(false); // Hide "out of area" modal when teleporting
 
                   console.log('✅ Teleported to QVB:', {
 
@@ -2762,24 +1441,24 @@ export default function Page() {
 
                   });
 
-                  setSimulateAtQvb(true);
+                  location.setSimulateAtQvb(true);
 
                 } else {
 
                   // Clear mock arrival mode when stopping simulation
-                  setMockArrivedLocation(null);
+                  location.setMockArrivedLocation(null);
 
-                  setSimulateAtQvb(false);
+                  location.setSimulateAtQvb(false);
 
-                  if (rawLocation) {
+                  if (location.rawLocation) {
 
-                    setUserLocation(rawLocation);
+                    location.setUserLocation(location.rawLocation);
 
                   } else {
 
                     // If stopping simulation but no real GPS, clear user location
 
-                    setUserLocation(undefined);
+                    location.setUserLocation(undefined);
 
                   }
 
@@ -2789,7 +1468,7 @@ export default function Page() {
 
             >
 
-              {simulateAtQvb ? 'Stop' : 'Teleport QVB'}
+              {location.simulateAtQvb ? 'Stop' : 'Teleport QVB'}
 
             </button>
 
@@ -2797,7 +1476,7 @@ export default function Page() {
 
         {/* Off-route warning banner */}
 
-        {isOffRoute && activeRoute && (
+        {navigation.isOffRoute && navigation.activeRoute && (
 
           <div className="absolute left-0 right-0 top-28 mx-auto w-full max-w-xl px-4 pointer-events-auto">
 
@@ -2805,7 +1484,7 @@ export default function Page() {
 
               <span className="text-xl">⚠️</span>
 
-              <span className="flex-1">You went off route! Distance: {distanceFromRoute.toFixed(0)}m</span>
+              <span className="flex-1">You went off route! Distance: {navigation.distanceFromRoute.toFixed(0)}m</span>
 
             </div>
 
@@ -2817,15 +1496,15 @@ export default function Page() {
 
         {/* Turn-by-turn banner - positioned above navigation card */}
 
-        {turnByTurnActive && currentInstruction && !isOffRoute && (
+        {navigation.turnByTurnActive && navigation.currentInstruction && !navigation.isOffRoute && (
 
           <div className="absolute left-0 right-0 bottom-28 mx-auto w-full max-w-xl px-4 pointer-events-auto">
 
             <div className="rounded-2xl bg-white shadow-md border px-4 py-3 text-sm font-medium flex items-center justify-between gap-3">
 
-              <span>{currentInstruction}</span>
+              <span>{navigation.currentInstruction}</span>
 
-              <button className="text-xs rounded bg-gray-100 px-2 py-1" onClick={() => { setTurnByTurnActive(false); setCurrentInstruction(''); }}>Stop</button>
+              <button className="text-xs rounded bg-gray-100 px-2 py-1" onClick={() => { navigation.setTurnByTurnActive(false); navigation.updateInstruction(''); }}>Stop</button>
 
             </div>
 
@@ -2839,32 +1518,32 @@ export default function Page() {
 
           <div className="pointer-events-auto">
 
-            {!aiMode ? (
+            {!search.aiMode ? (
 
               <SearchWidget
 
-                keyword={keyword}
+                keyword={search.keyword}
 
-                onKeywordChange={setKeyword}
+                onKeywordChange={search.setKeyword}
 
-                selectedCategory={selectedCategory}
+                selectedCategory={search.selectedCategory}
 
-                onCategoryChange={setSelectedCategory}
+                onCategoryChange={search.setSelectedCategory}
 
-                activeTabs={activeTabs}
+                activeTabs={search.activeTabs}
 
-                onTabToggle={handleTabToggle}
+                onTabToggle={search.handleTabToggle}
 
                 onOpenAI={() => {
-                setPendingQuery(keyword || undefined);
-                setAiMode(true);
+                search.setPendingQuery(search.keyword || undefined);
+                search.setAiMode(true);
               }}
 
               allPlaces={allPlaces}
-              filteredPlaces={filteredPlaces}
+              filteredPlaces={search.filteredPlaces}
               deals={allDeals}
               events={allEvents}
-              userLocation={userLocation}
+              userLocation={location.userLocation}
               onSelectPlace={handleSearchSelectPlace}
 
             />
@@ -2875,9 +1554,9 @@ export default function Page() {
 
                 <AISearch
 
-                  initialQuery={pendingQuery}
+                  initialQuery={search.pendingQuery}
 
-                  userLocation={userLocation}
+                  userLocation={location.userLocation}
 
                   onSelectPlace={handleAiSelectPlace}
 
@@ -2887,9 +1566,9 @@ export default function Page() {
 
                   onStartNavigation={handleAiNavigation}
 
-                  onExitAI={handleExitAi}
+                  onExitAI={search.handleExitAi}
 
-                  entryContext={aiEntryContext}
+                  entryContext={search.aiEntryContext}
 
                 />
 
@@ -2907,27 +1586,27 @@ export default function Page() {
 
         <NavigationPanel
 
-            businesses={visibleBusinesses}
+            businesses={search.filteredPlaces}
 
-            userLocation={userLocation}
+            userLocation={location.userLocation}
 
-            defaultDestination={navigationDestination}
+            defaultDestination={navigation.navigationDestination}
 
-            externalStart={navigationStart}
+            externalStart={navigation.navigationStart}
 
-            externalDestination={navigationDestination}
+            externalDestination={navigation.navigationDestination}
 
             title="Sydney CBD"
 
-            onSelectMyLocation={() => setCenterOnUserTick((t) => t + 1)}
+            onSelectMyLocation={() => map.setCenterOnUserTick((t) => t + 1)}
 
-            onSelectStartPoint={(point) => setCenterOnPoint({ lat: point.lat, lng: point.lng, tick: Date.now(), targetScale: 2.8 })}
+            onSelectStartPoint={(point) => map.setCenterOnPoint({ lat: point.lat, lng: point.lng, tick: Date.now(), targetScale: 2.8 })}
 
             onClearNavigation={clearAllNavigation}
 
-            navigationActive={navigationActive}
+            navigationActive={navigation.navigationActive}
 
-            turnByTurnActive={turnByTurnActive}
+            turnByTurnActive={navigation.turnByTurnActive}
 
             onStartJourney={(start, destination) => {
 
@@ -2947,11 +1626,23 @@ export default function Page() {
 
             }}
 
-            activeRoute={activeRoute}
+            activeRoute={navigation.activeRoute}
 
-            graph={pathGraph}
+            graph={navigation.pathGraph}
 
             onMockArrival={handleMockArrival}
+
+            onRecenterMap={() => map.setCenterOnUserTick((t) => t + 1)}
+
+            upcomingEventsCount={upcomingEventsCount}
+
+            onShowEvents={() => {
+              search.handleTabToggle('events');
+            }}
+
+            accessibilityMode={navigation.accessibilityMode}
+
+            onToggleAccessibility={navigation.setAccessibilityMode}
 
           />
 
@@ -2959,7 +1650,7 @@ export default function Page() {
 
         {/* Out-of-area notice */}
 
-        {showOutOfArea && (
+        {map.showOutOfArea && (
 
           <div className="absolute inset-0 z-40 flex items-center justify-center bg-black/40 p-4 pointer-events-auto">
 
@@ -2971,7 +1662,7 @@ export default function Page() {
 
               <div className="flex justify-end gap-2">
 
-                <button className="rounded bg-gray-100 px-4 py-2 text-sm" onClick={() => setShowOutOfArea(false)}>Close</button>
+                <button className="rounded bg-gray-100 px-4 py-2 text-sm" onClick={() => map.setShowOutOfArea(false)}>Close</button>
 
               </div>
 
@@ -2985,19 +1676,19 @@ export default function Page() {
 
         {/* Location Detail Modal */}
 
-        {showLocationModal && selected && (
+        {map.showLocationModal && map.selected && (
 
           <div className="pointer-events-auto">
 
             <LocationDetailModal
 
-              location={selected}
+              location={map.selected}
 
-              deals={dealsByPlaceId.get(selected.id) || []}
+              deals={search.dealsByPlaceId.get(map.selected.id) || []}
 
-              events={eventsByPlaceId.get(selected.id) || []}
+              events={search.eventsByPlaceId.get(map.selected.id) || []}
 
-              onClose={() => setShowLocationModal(false)}
+              onClose={() => map.setShowLocationModal(false)}
 
               onSetStart={() => {
 
@@ -3005,37 +1696,37 @@ export default function Page() {
 
                 const cleanBusiness: Business = {
 
-                  id: selected.id,
+                  id: map.selected!.id,
 
-                  name: selected.name,
+                  name: map.selected!.name,
 
-                  category: selected.category,
+                  category: map.selected!.category,
 
-                  lat: selected.lat,
+                  lat: map.selected!.lat,
 
-                  lng: selected.lng,
+                  lng: map.selected!.lng,
 
-                  address: selected.address,
+                  address: map.selected!.address,
 
-                  priceRange: selected.priceRange,
+                  priceRange: map.selected!.priceRange,
 
-                  description: selected.description,
+                  description: map.selected!.description,
 
-                  hours: selected.hours,
+                  hours: map.selected!.hours,
 
-                  phone: selected.phone,
+                  phone: map.selected!.phone,
 
-                  rating: selected.rating,
+                  rating: map.selected!.rating,
 
                 };
 
-                setNavigationStart(cleanBusiness);
+                navigation.setNavigationStart(cleanBusiness);
 
-                setCenterOnPoint({ lat: selected.lat, lng: selected.lng, tick: Date.now(), targetScale: 2.8 });
+                map.setCenterOnPoint({ lat: map.selected!.lat, lng: map.selected!.lng, tick: Date.now(), targetScale: 2.8 });
 
-                setShowLocationModal(false);
+                map.setShowLocationModal(false);
 
-                setSelected(null);
+                map.setSelected(null);
 
               }}
 
@@ -3045,37 +1736,37 @@ export default function Page() {
 
                 const cleanBusiness: Business = {
 
-                  id: selected.id,
+                  id: map.selected!.id,
 
-                  name: selected.name,
+                  name: map.selected!.name,
 
-                  category: selected.category,
+                  category: map.selected!.category,
 
-                  lat: selected.lat,
+                  lat: map.selected!.lat,
 
-                  lng: selected.lng,
+                  lng: map.selected!.lng,
 
-                  address: selected.address,
+                  address: map.selected!.address,
 
-                  priceRange: selected.priceRange,
+                  priceRange: map.selected!.priceRange,
 
-                  description: selected.description,
+                  description: map.selected!.description,
 
-                  hours: selected.hours,
+                  hours: map.selected!.hours,
 
-                  phone: selected.phone,
+                  phone: map.selected!.phone,
 
-                  rating: selected.rating,
+                  rating: map.selected!.rating,
 
                 };
 
-                setNavigationDestination(cleanBusiness);
+                navigation.setNavigationDestination(cleanBusiness);
 
-                setCenterOnPoint({ lat: selected.lat, lng: selected.lng, tick: Date.now(), targetScale: 2.8 });
+                map.setCenterOnPoint({ lat: map.selected!.lat, lng: map.selected!.lng, tick: Date.now(), targetScale: 2.8 });
 
-                setShowLocationModal(false);
+                map.setShowLocationModal(false);
 
-                setSelected(null);
+                map.setSelected(null);
 
               }}
 
@@ -3090,23 +1781,23 @@ export default function Page() {
         )}
 
         {/* Indoor POI Modal */}
-        {selectedIndoorPOI && (
+        {navigation.selectedIndoorPOI && (
           <div className="pointer-events-auto">
             <IndoorPOIModal
-              poi={selectedIndoorPOI}
-              onClose={() => setSelectedIndoorPOI(null)}
+              poi={navigation.selectedIndoorPOI}
+              onClose={() => navigation.setSelectedIndoorPOI(null)}
               onSetStart={() => {
-                setIndoorNavigationStart(selectedIndoorPOI);
-                console.log('🎯 Indoor start set:', selectedIndoorPOI.name);
+                navigation.setIndoorNavigationStart(navigation.selectedIndoorPOI);
+                console.log('🎯 Indoor start set:', navigation.selectedIndoorPOI!.name);
               }}
               onSetDestination={() => {
-                setIndoorNavigationDestination(selectedIndoorPOI);
-                console.log('🎯 Indoor destination set:', selectedIndoorPOI.name);
+                navigation.setIndoorNavigationDestination(navigation.selectedIndoorPOI);
+                console.log('🎯 Indoor destination set:', navigation.selectedIndoorPOI!.name);
               }}
               onTakeMeThere={() => {
                 // Set as destination and calculate route if we have a start
-                setIndoorNavigationDestination(selectedIndoorPOI);
-                console.log('🚶 Navigate to:', selectedIndoorPOI.name);
+                navigation.setIndoorNavigationDestination(navigation.selectedIndoorPOI);
+                console.log('🚶 Navigate to:', navigation.selectedIndoorPOI!.name);
                 // Route calculation will happen in a useEffect
               }}
             />
@@ -3138,7 +1829,7 @@ export default function Page() {
 
       {/* Navigation Error Modal - OUTSIDE pointer-events-none container */}
 
-      {showNavigationError && (
+      {navigation.showNavigationError && (
 
         <div
 
@@ -3184,7 +1875,7 @@ export default function Page() {
 
             <div className="mb-3 text-xl font-bold text-red-600">❌ No Route Found</div>
 
-            <p className="mb-6 whitespace-pre-line text-sm text-gray-700 leading-relaxed">{navigationErrorMessage}</p>
+            <p className="mb-6 whitespace-pre-line text-sm text-gray-700 leading-relaxed">{navigation.navigationErrorMessage}</p>
 
 
 
@@ -3236,4 +1927,20 @@ export default function Page() {
 
   );
 
+}
+
+/**
+ * PERF-1: Main Page with Context Providers
+ * Wraps PageContent with all context providers for clean state management
+ */
+export default function Page() {
+  return (
+    <AppProvider>
+      <GPSTracker />
+      <NavigationEngine />
+      <IndoorNavigation />
+      <DataLoader />
+      <PageContent />
+    </AppProvider>
+  );
 }
