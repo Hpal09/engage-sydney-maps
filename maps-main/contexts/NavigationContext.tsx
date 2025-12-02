@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, useCallback, ReactNode } from 'react';
+import { createContext, useContext, useState, useMemo, useCallback, ReactNode } from 'react';
 import type { Business, PathNode, PathGraph, DeviceLocation } from '@/types';
 import type { PathfindingDiagnostics } from '@/lib/pathfinding';
 import { useNavigationState } from '@/hooks/useNavigationState';
@@ -146,8 +146,9 @@ export function NavigationProvider({ children, userLocation }: NavigationProvide
     setShowNavigationError(false);
     navActions.clearNavigation();
   }, [navActions]);
-  
-  const value: NavigationContextType = {
+
+  // CRITICAL FIX: Memoize context value to prevent re-render cascades
+  const value: NavigationContextType = useMemo(() => ({
     navigationStart,
     setNavigationStart,
     navigationDestination,
@@ -160,7 +161,7 @@ export function NavigationProvider({ children, userLocation }: NavigationProvide
     setTurnByTurnActive,
     pathGraph,
     setPathGraph,
-    
+
     // From reducer
     navMarker: navState.navMarker,
     remainingRoute: navState.remainingRoute,
@@ -168,17 +169,17 @@ export function NavigationProvider({ children, userLocation }: NavigationProvide
     isOffRoute: navState.isOffRoute,
     distanceFromRoute: navState.distanceFromRoute,
     currentInstruction: navState.currentInstruction,
-    
+
     updateGPSPosition: navActions.updateGPSPosition,
     updateInstruction: navActions.updateInstruction,
     clearNavigation: navActions.clearNavigation,
     resetRoute: navActions.resetRoute,
-    
+
     showNavigationError,
     setShowNavigationError,
     navigationErrorMessage,
     setNavigationErrorMessage,
-    
+
     indoorModeActive,
     setIndoorModeActive,
     selectedFloorId,
@@ -193,14 +194,14 @@ export function NavigationProvider({ children, userLocation }: NavigationProvide
     setIndoorNavigationDestination,
     indoorRoute,
     setIndoorRoute,
-    
+
     buildingEntrances,
     setBuildingEntrances,
     hybridRouteActive,
     setHybridRouteActive,
     hybridGraph,
     setHybridGraph,
-    
+
     pathfindingDiag,
     setPathfindingDiag,
 
@@ -208,8 +209,40 @@ export function NavigationProvider({ children, userLocation }: NavigationProvide
     setAccessibilityMode,
 
     clearAllNavigation,
-  };
-  
+  }), [
+    navigationStart,
+    navigationDestination,
+    navigationActive,
+    activeRoute,
+    turnByTurnActive,
+    pathGraph,
+    navState.navMarker,
+    navState.remainingRoute,
+    navState.routeProgress,
+    navState.isOffRoute,
+    navState.distanceFromRoute,
+    navState.currentInstruction,
+    navActions.updateGPSPosition,
+    navActions.updateInstruction,
+    navActions.clearNavigation,
+    navActions.resetRoute,
+    showNavigationError,
+    navigationErrorMessage,
+    indoorModeActive,
+    selectedFloorId,
+    buildingData,
+    selectedIndoorPOI,
+    indoorNavigationStart,
+    indoorNavigationDestination,
+    indoorRoute,
+    buildingEntrances,
+    hybridRouteActive,
+    hybridGraph,
+    pathfindingDiag,
+    accessibilityMode,
+    clearAllNavigation,
+  ]);
+
   return (
     <NavigationContext.Provider value={value}>
       {children}

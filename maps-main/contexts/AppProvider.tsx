@@ -1,6 +1,6 @@
 "use client";
 
-import { ReactNode, useState, useEffect } from 'react';
+import { ReactNode, useState, useEffect, useMemo } from 'react';
 import { SearchProvider } from './SearchContext';
 import { NavigationProvider } from './NavigationContext';
 import { MapProvider } from './MapContext';
@@ -67,11 +67,11 @@ export function AppProvider({ children }: AppProviderProps) {
     })();
   }, []);
   
-  // Calculate upcoming events count
-  const upcomingEventsCount = allEvents.filter(event => {
+  // Calculate upcoming events count (memoized to prevent recalculation on every render)
+  const upcomingEventsCount = useMemo(() => {
     const now = new Date();
-    return event.isLive && new Date(event.endsAt) >= now;
-  }).length;
+    return allEvents.filter(event => event.isLive && new Date(event.endsAt) >= now).length;
+  }, [allEvents]);
   
   // Nested providers - order matters!
   // LocationProvider must be outermost (others depend on it)

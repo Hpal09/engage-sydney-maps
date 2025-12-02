@@ -96,13 +96,28 @@ export default function GPSTracker() {
   const lastHeadingRef = useRef<number>(0);
   const smoothAlphaRef = useRef<number>(SMOOTHING.GPS_HEADING_ALPHA);
   const navMarkerRef = useRef<{ x: number; y: number; angleDeg: number } | null>(null);
-  
+
   const projectLatLng = useCallback((lat: number, lng: number) => gpsToSvg(lat, lng), []);
-  
-  // GPS processing function
+
+  // Store context values in refs to avoid recreating throttle function
+  const locationRef = useRef(location);
+  const navigationRef = useRef(navigation);
+  const mapRef = useRef(map);
+
+  // Update refs when context values change (doesn't trigger re-render of useMemo)
+  useEffect(() => {
+    locationRef.current = location;
+    navigationRef.current = navigation;
+    mapRef.current = map;
+  }, [location, navigation, map]);
+
+  // GPS processing function - CRITICAL FIX: dependencies removed to prevent throttle recreation
   const processGPSUpdate = useMemo(
     () => throttle(
       (pos: GeolocationPosition) => {
+        const location = locationRef.current;
+        const navigation = navigationRef.current;
+        const map = mapRef.current;
         // Skip GPS updates if in mock arrival mode
         if (location.mockArrivedLocation) {
           return;
@@ -253,7 +268,7 @@ export default function GPSTracker() {
       },
       parseInt(process.env.NEXT_PUBLIC_GPS_THROTTLE_MS || '1000', 10)
     ),
-    [location, navigation, map, projectLatLng]
+    [] // CRITICAL: Empty deps - refs are used inside to access latest context values
   );
   
   // Watch GPS position

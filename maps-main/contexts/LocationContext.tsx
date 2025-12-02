@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, ReactNode } from 'react';
+import { createContext, useContext, useState, useMemo, ReactNode } from 'react';
 import type { DeviceLocation } from '@/types';
 
 /**
@@ -12,21 +12,21 @@ interface LocationContextType {
   // User location
   userLocation: DeviceLocation | undefined;
   setUserLocation: (location: DeviceLocation | undefined) => void;
-  
+
   rawLocation: DeviceLocation | undefined;
   setRawLocation: (location: DeviceLocation | undefined) => void;
-  
+
   // Compass
   compassHeading: number | null;
   setCompassHeading: (heading: number | null) => void;
-  
+
   // Mock/simulation
   simulateAtQvb: boolean;
   setSimulateAtQvb: (simulate: boolean) => void;
-  
+
   mockArrivedLocation: DeviceLocation | null;
   setMockArrivedLocation: (location: DeviceLocation | null) => void;
-  
+
   // Effective heading (GPS + compass)
   effectiveHeading: number;
 }
@@ -51,11 +51,15 @@ export function LocationProvider({ children }: LocationProviderProps) {
   const [compassHeading, setCompassHeading] = useState<number | null>(null);
   const [simulateAtQvb, setSimulateAtQvb] = useState(false);
   const [mockArrivedLocation, setMockArrivedLocation] = useState<DeviceLocation | null>(null);
-  
+
   // Combine GPS heading with compass heading (GPS preferred, compass as fallback)
-  const effectiveHeading = userLocation?.heading ?? compassHeading ?? 0;
-  
-  const value: LocationContextType = {
+  const effectiveHeading = useMemo(() =>
+    userLocation?.heading ?? compassHeading ?? 0,
+    [userLocation?.heading, compassHeading]
+  );
+
+  // CRITICAL FIX: Memoize context value to prevent re-render cascades
+  const value: LocationContextType = useMemo(() => ({
     userLocation,
     setUserLocation,
     rawLocation,
@@ -67,8 +71,15 @@ export function LocationProvider({ children }: LocationProviderProps) {
     mockArrivedLocation,
     setMockArrivedLocation,
     effectiveHeading,
-  };
-  
+  }), [
+    userLocation,
+    rawLocation,
+    compassHeading,
+    simulateAtQvb,
+    mockArrivedLocation,
+    effectiveHeading,
+  ]);
+
   return (
     <LocationContext.Provider value={value}>
       {children}
