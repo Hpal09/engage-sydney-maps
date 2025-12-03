@@ -234,7 +234,7 @@ export default function CustomSydneyMap({ businesses, selectedBusiness, userLoca
     setSvgLoaded(false);
 
     // Determine which SVG to load based on indoor mode
-    let svgPath = '/maps/20251028SydneyMap-01.optimized.svg'; // Default outdoor map (optimized)
+    let svgPath = '/maps/20251028SydneyMap-01.svg'; // Default outdoor map
 
     if (indoorModeActive && buildingData && selectedFloorId) {
       const selectedFloor = buildingData.floors?.find((f: any) => f.id === selectedFloorId);
