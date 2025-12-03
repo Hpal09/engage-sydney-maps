@@ -135,7 +135,9 @@ export default function GPSTracker() {
         // GPS filtering
         const MAX_ACCURACY = parseInt(process.env.NEXT_PUBLIC_GPS_MAX_ACCURACY || '50', 10);
         if (!location.simulateAtQvb && fresh.accuracy && fresh.accuracy > MAX_ACCURACY) {
-          console.warn('⚠️ GPS accuracy too low:', fresh.accuracy.toFixed(1) + 'm');
+          if (process.env.NODE_ENV !== 'production') {
+            console.warn('⚠️ GPS accuracy too low:', fresh.accuracy.toFixed(1) + 'm');
+          }
           return;
         }
 
@@ -149,7 +151,9 @@ export default function GPSTracker() {
           const MAX_WALKING_SPEED = parseFloat(process.env.NEXT_PUBLIC_GPS_MAX_WALKING_SPEED || '3.5');
 
           if (timeDelta > 0 && distanceFromLast / timeDelta > MAX_WALKING_SPEED) {
-            console.warn('⚠️ GPS jump detected');
+            if (process.env.NODE_ENV !== 'production') {
+              console.warn('⚠️ GPS jump detected');
+            }
             return;
           }
         }
@@ -291,6 +295,7 @@ export default function GPSTracker() {
   // This component is invisible - just handles GPS logic
   return null;
 }
+
 
 
 

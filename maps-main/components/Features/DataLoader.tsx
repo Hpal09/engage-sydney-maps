@@ -42,20 +42,27 @@ export default function DataLoader() {
   useEffect(() => {
     (async () => {
       if (!(window as any).__SYD_GRAPH__) {
-        console.log('📦 Loading navigation graph...');
+        if (process.env.NODE_ENV !== 'production') {
+          console.log('📦 Loading navigation graph...');
+        }
         const g = await buildPathNetwork();
         (window as any).__SYD_GRAPH__ = g;
         navigation.setPathGraph(g);
 
         const totalEdges = Object.values(g.adjacency).reduce((a, b) => a + b.length, 0);
-        console.log('✅ Graph loaded:', Object.keys(g.nodesById).length, 'nodes', totalEdges, 'edges');
+        if (process.env.NODE_ENV !== 'production') {
+          console.log('✅ Graph loaded:', Object.keys(g.nodesById).length, 'nodes', totalEdges, 'edges');
+        }
 
         // Validate graph
         const validation = validateGraph(g);
         logValidationResult(validation);
 
         if (!validation.isValid) {
-          console.error('⚠️  Graph validation failed! Navigation may not work correctly.');
+          // Keep error log but gate it (validation failures are important)
+          if (process.env.NODE_ENV !== 'production') {
+            console.error('⚠️  Graph validation failed! Navigation may not work correctly.');
+          }
         }
       } else {
         navigation.setPathGraph((window as any).__SYD_GRAPH__);
@@ -66,6 +73,7 @@ export default function DataLoader() {
   // Invisible component
   return null;
 }
+
 
 
 

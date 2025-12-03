@@ -52,12 +52,14 @@ import { findAnyRoute, findRoute, findRouteWithDiagnostics, type PathfindingDiag
 import { findRouteWithWorker } from '@/lib/pathfindingWorkerManager';
 
 import { buildPathNetwork } from '@/lib/graphLoader';
-
 import { gpsToSvg, calculateDistance, isWithinMapBounds, setCalibration, getSvgBounds, normalizeLatitude, normalizeLongitude } from '@/lib/coordinateMapper';
 
 import { getNextInstruction } from '@/lib/turnByTurn';
 
 import NavigationPanel from '@/components/Navigation/NavigationPanel';
+
+// DIAGNOSTIC - TEMPORARY - Remove after testing
+import { MemoryProfiler } from '@/components/Debug/MemoryProfiler';
 
 // Lazy load modals - they're only shown conditionally
 const LocationDetailModal = dynamic(() => import('@/components/Location/LocationDetailModal'), {
@@ -66,8 +68,6 @@ const LocationDetailModal = dynamic(() => import('@/components/Location/Location
 const IndoorPOIModal = dynamic(() => import('@/components/Location/IndoorPOIModal'), {
   ssr: false,
 });
-
-import { validateGraph, logValidationResult } from '@/lib/graphValidator';
 
 import { findPathBetweenPOIs, findMultiFloorPath } from '@/lib/indoorPathfinding';
 import { buildHybridGraph, findHybridRoute } from '@/lib/hybridPathfinding';
@@ -304,16 +304,8 @@ function PageContent() {
   const map = useMap();
   const location = useLocation();
 
-  // Data state - keeping temporarily until AppProvider handles it
-  const [allPlaces, setAllPlaces] = useState<Business[]>([]);
-  const [allDeals, setAllDeals] = useState<Deal[]>([]);
-  const [allEvents, setAllEvents] = useState<Event[]>([]);
-
-  // Calculate upcoming events count
-  const upcomingEventsCount = useMemo(() => {
-    const now = new Date();
-    return allEvents.filter(event => event.isLive && new Date(event.endsAt) >= now).length;
-  }, [allEvents]);
+  // Get data from SearchContext (loaded by AppProvider)
+  const { allPlaces, allDeals, allEvents, upcomingEventsCount } = search;
 
 
 
@@ -758,62 +750,13 @@ function PageContent() {
 
   }, [navigation.turnByTurnActive, navigation.activeRoute, location.userLocation, navigation]);
 
-
-
-  // Preload the simplified graph on first render and validate it
-
-  useEffect(() => {
-
-    (async () => {
-
-      if (!(window as any).__SYD_GRAPH__) {
-
-        console.log('📦 Loading navigation graph...');
-
-        const g = await buildPathNetwork();
-
-        (window as any).__SYD_GRAPH__ = g;
-        navigation.setPathGraph(g);
-
-        const totalEdges = Object.values(g.adjacency).reduce((a, b) => a + b.length, 0);
-        const edgesWithStreets = Object.values(g.adjacency).flat().filter(e => e.street).length;
-        console.log('✅ Graph loaded:', Object.keys(g.nodesById).length, 'nodes', totalEdges, 'edges');
-        console.log('🏷️  Street names:', edgesWithStreets, 'edges have street names');
-
-
-
-        // Validate graph quality
-
-        const validation = validateGraph(g);
-
-        logValidationResult(validation);
-
-
-
-        if (!validation.isValid) {
-
-          console.error('⚠️  Graph validation failed! Navigation may not work correctly.');
-
-          console.error('   Consider running: npm run build:graph');
-
-        }
-
-      } else {
-        // Graph already loaded, just set the state
-        navigation.setPathGraph((window as any).__SYD_GRAPH__);
-      }
-
-    })();
-
-  }, []);
-
-
-
   // Helper function to clear all navigation state
 
   const clearAllNavigation = () => {
 
-    console.log('🧹 Clearing all navigation state');
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('🧹 Clearing all navigation state');
+    }
 
     // Clear navigation context state
     navigation.clearAllNavigation();
@@ -825,12 +768,16 @@ function PageContent() {
 
     // Reset map rotation to north-up
     map.setMapRotation(0);
-    console.log('🧭 Map rotation reset to north-up (0°)');
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('🧭 Map rotation reset to north-up (0°)');
+    }
 
     // Recenter on current location if available
     if (location.userLocation) {
       map.setCenterOnUserTick((t) => t + 1);
-      console.log('📍 Recentered on user location after clearing navigation');
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('📍 Recentered on user location after clearing navigation');
+      }
     }
 
   };
@@ -938,7 +885,7 @@ function PageContent() {
 
       console.log('Graph loaded:', Object.keys(g.nodesById).length, 'nodes',
 
-        Object.values(g.adjacency).reduce((a, b) => a + b.length, 0), 'edges');
+        Object.values(g.adjacency).reduce((a, b: any[]) => a + b.length, 0), 'edges');
 
     }
 
@@ -1280,6 +1227,8 @@ function PageContent() {
   return (
 
     <>
+      {/* DIAGNOSTIC - TEMPORARY - Remove after testing */}
+      <MemoryProfiler />
 
       {/* LAYER 1: Full-screen map background */}
 

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { TransformComponent, TransformWrapper, ReactZoomPanPinchRef } from 'react-zoom-pan-pinch';
 import { VIEWBOX, gpsToSvg, setSvgBounds, setCalibration, isWithinMapBounds, normalizeLatitude, normalizeLongitude } from '@/lib/coordinateMapper';
+import { useVisibleMarkers } from '@/hooks/useVisibleMarkers';
 import type { Business, DeviceLocation } from '@/types';
 import MapControls from './MapControls';
 import type { PathNode } from '@/types';
@@ -67,8 +68,17 @@ export default function CustomSydneyMap({ businesses, selectedBusiness, userLoca
   const [svgContent, setSvgContent] = useState<string>('');
   const svgContentRef = useRef<SVGGElement>(null);
 
+  // PERFORMANCE: Track viewport bounds for marker culling
+  const [viewBounds, setViewBounds] = useState<{
+    minX: number;
+    maxX: number;
+    minY: number;
+    maxY: number;
+  } | null>(null);
+
   const lastScaleRef = useRef<number>(1);
   const logTransformsUntilRef = useRef<number>(0);
+  const lastViewportUpdateRef = useRef<number>(0); // NEW: throttle timestamp
   const ACTIVITY_LOG_WINDOW_MS = 5000;
   const isDev = false; // Hidden for demo - was: process.env.NODE_ENV === 'development'
 
@@ -179,13 +189,52 @@ export default function CustomSydneyMap({ businesses, selectedBusiness, userLoca
     lastScaleRef.current = scale;  // Update last scale
   }, [projectLatLng, viewBox]);
 
+  // PERFORMANCE: Update viewport bounds on pan/zoom for marker culling
+  const updateViewportBounds = useCallback((ref: ReactZoomPanPinchRef) => {
+    // Throttle updates to reduce re-renders during rapid pan/zoom
+    const now = Date.now();
+    const THROTTLE_MS = 150;
+    if (now - lastViewportUpdateRef.current < THROTTLE_MS) {
+      return; // Skip update if called too soon
+    }
+    lastViewportUpdateRef.current = now;
+
+    const state = (ref as ReactZoomPanPinchRef & { state?: TransformState })?.state;
+    if (!state) return;
+
+    const wrapper = ref.instance?.wrapperComponent as HTMLElement;
+    if (!wrapper) return;
+
+    const { scale, positionX, positionY } = state;
+    const width = wrapper.offsetWidth;
+    const height = wrapper.offsetHeight;
+
+    // Calculate visible SVG coordinates from screen coordinates
+    const renderScaleX = width / viewBox.width;
+    const renderScaleY = height / viewBox.height;
+    const renderScale = Math.min(renderScaleX, renderScaleY);
+
+    const scaledSvgWidth = viewBox.width * renderScale;
+    const scaledSvgHeight = viewBox.height * renderScale;
+    const offsetX = (width - scaledSvgWidth) / 2;
+    const offsetY = (height - scaledSvgHeight) / 2;
+
+    // Convert screen viewport to SVG coordinate space
+    const minX = (-positionX - offsetX) / (renderScale * scale);
+    const maxX = (width - positionX - offsetX) / (renderScale * scale);
+    const minY = (-positionY - offsetY) / (renderScale * scale);
+    const maxY = (height - positionY - offsetY) / (renderScale * scale);
+
+    setViewBounds({ minX, maxX, minY, maxY });
+  }, [viewBox]);
+
   // Preload SVG image and extract viewBox to set bounds
   useEffect(() => {
     // Reset loading state when switching maps
     setSvgLoaded(false);
 
     // Determine which SVG to load based on indoor mode
-    let svgPath = '/maps/20251028SydneyMap-01.svg'; // Default outdoor map
+    let svgPath = '/maps/20251028SydneyMap-01.optimized.svg'; // Default outdoor map (optimized)
 
     if (indoorModeActive && buildingData && selectedFloorId) {
       const selectedFloor = buildingData.floors?.find((f: any) => f.id === selectedFloorId);
@@ -258,6 +307,10 @@ export default function CustomSydneyMap({ businesses, selectedBusiness, userLoca
       };
     });
   }, [businesses, projectLatLng, validateBusinessCoords]);
+
+  // PERFORMANCE: Only render markers visible in viewport (reduces DOM nodes by ~90%)
+  // EXCEPTION: When search is active (showPOIMarkers), show ALL results regardless of viewport
+  const visibleMarkers = useVisibleMarkers(markers, showPOIMarkers ? null : viewBounds, 150);
 
   // Removed complex SVG DOM manipulation - using simple POI markers instead for performance
 
@@ -465,6 +518,8 @@ export default function CustomSydneyMap({ businesses, selectedBusiness, userLoca
             const state = (ref as ReactZoomPanPinchRef & { state?: TransformState })?.state;
             lastScaleRef.current = state?.scale ?? 1;
             maybeLogTransform('onInit', state as unknown as Record<string, unknown>);
+            // PERFORMANCE: Set initial viewport bounds for marker culling
+            updateViewportBounds(ref);
           } catch {
             maybeLogTransform('onInit');
           }
@@ -474,6 +529,8 @@ export default function CustomSydneyMap({ businesses, selectedBusiness, userLoca
             const state = (ref as ReactZoomPanPinchRef & { state?: TransformState })?.state;
             lastScaleRef.current = state?.scale ?? lastScaleRef.current;
             maybeLogTransform('onTransformed', state as unknown as Record<string, unknown>);
+            // PERFORMANCE: Update viewport bounds for marker culling
+            updateViewportBounds(ref);
           } catch {
             maybeLogTransform('onTransformed');
           }
@@ -733,45 +790,46 @@ export default function CustomSydneyMap({ businesses, selectedBusiness, userLoca
                   </g>
                 )}
 
-                {/* Business markers - Visible when filtering, otherwise invisible but clickable */}
+                {/* PERFORMANCE: Business markers - Conditional rendering to minimize DOM nodes */}
                 <g>
-                  {markers.map((m) => (
+                  {/* PASS 1: Visible POI pin markers (only when showPOIMarkers is true) */}
+                  {showPOIMarkers && visibleMarkers.map((m) => (
                     <g
-                      key={m.id}
+                      key={`pin-${m.id}`}
                       onClick={() => onBusinessClick?.(m)}
                       className="cursor-pointer"
                       style={{ pointerEvents: 'auto' }}
                     >
-                      {showPOIMarkers ? (
-                        /* Visible POI pin marker when filtering is active */
-                        <>
-                          {/* Pin shadow */}
-                          <ellipse cx={m.svg.x + 1} cy={m.svg.y + 12} rx={4} ry={1.5} fill="#000" opacity="0.2" />
-                          {/* Pin body - Red location pin */}
-                          <path
-                            d={`M ${m.svg.x} ${m.svg.y - 10}
-                               C ${m.svg.x - 8} ${m.svg.y - 10}, ${m.svg.x - 8} ${m.svg.y - 4}, ${m.svg.x - 8} ${m.svg.y - 2}
-                               C ${m.svg.x - 8} ${m.svg.y + 2}, ${m.svg.x} ${m.svg.y + 8}, ${m.svg.x} ${m.svg.y + 10}
-                               C ${m.svg.x} ${m.svg.y + 8}, ${m.svg.x + 8} ${m.svg.y + 2}, ${m.svg.x + 8} ${m.svg.y - 2}
-                               C ${m.svg.x + 8} ${m.svg.y - 4}, ${m.svg.x + 8} ${m.svg.y - 10}, ${m.svg.x} ${m.svg.y - 10} Z`}
-                            fill="#ef4444"
-                            stroke="#b91c1c"
-                            strokeWidth={1}
-                          />
-                          {/* Inner white circle */}
-                          <circle cx={m.svg.x} cy={m.svg.y - 5} r={3} fill="#fff" />
-                        </>
-                      ) : (
-                        /* Invisible click target - opacity 0 but still clickable */
-                        <circle
-                          cx={m.svg.x}
-                          cy={m.svg.y}
-                          r={20}
-                          fill="#000"
-                          opacity="0"
-                        />
-                      )}
+                      {/* Pin shadow */}
+                      <ellipse cx={m.svg.x + 1} cy={m.svg.y + 12} rx={4} ry={1.5} fill="#000" opacity="0.2" />
+                      {/* Pin body - Red location pin */}
+                      <path
+                        d={`M ${m.svg.x} ${m.svg.y - 10}
+                           C ${m.svg.x - 8} ${m.svg.y - 10}, ${m.svg.x - 8} ${m.svg.y - 4}, ${m.svg.x - 8} ${m.svg.y - 2}
+                           C ${m.svg.x - 8} ${m.svg.y + 2}, ${m.svg.x} ${m.svg.y + 8}, ${m.svg.x} ${m.svg.y + 10}
+                           C ${m.svg.x} ${m.svg.y + 8}, ${m.svg.x + 8} ${m.svg.y + 2}, ${m.svg.x + 8} ${m.svg.y - 2}
+                           C ${m.svg.x + 8} ${m.svg.y - 4}, ${m.svg.x + 8} ${m.svg.y - 10}, ${m.svg.x} ${m.svg.y - 10} Z`}
+                        fill="#ef4444"
+                        stroke="#b91c1c"
+                        strokeWidth={1}
+                      />
+                      {/* Inner white circle */}
+                      <circle cx={m.svg.x} cy={m.svg.y - 5} r={3} fill="#fff" />
                     </g>
+                  ))}
+
+                  {/* PASS 2: Invisible click targets (only when showPOIMarkers is false) */}
+                  {!showPOIMarkers && visibleMarkers.map((m) => (
+                    <circle
+                      key={`target-${m.id}`}
+                      cx={m.svg.x}
+                      cy={m.svg.y}
+                      r={20}
+                      fill="transparent"
+                      onClick={() => onBusinessClick?.(m)}
+                      className="cursor-pointer"
+                      style={{ pointerEvents: 'auto' }}
+                    />
                   ))}
                 </g>
 
