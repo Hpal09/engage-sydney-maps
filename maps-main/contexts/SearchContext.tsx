@@ -13,40 +13,46 @@ import type { AIEntryContext } from '@/types/ai';
  */
 
 interface SearchContextType {
+  // Raw data (exposed for non-search operations like selecting from URL params)
+  allPlaces: Business[];
+  allDeals: Deal[];
+  allEvents: Event[];
+  upcomingEventsCount: number;
+
   // Raw search state
   keyword: string;
   setKeyword: (keyword: string) => void;
   debouncedKeyword: string;
-  
+
   selectedCategory: string;
   setSelectedCategory: (category: string) => void;
-  
+
   activeTabs: Set<'deals' | 'events' | 'experiences'>;
   handleTabToggle: (tab: 'deals' | 'events' | 'experiences') => void;
-  
+
   nearMeOnly: boolean;
   setNearMeOnly: (enabled: boolean) => void;
-  
+
   // AI mode
   aiMode: boolean;
   setAiMode: (enabled: boolean) => void;
   pendingQuery: string | undefined;
   setPendingQuery: (query: string | undefined) => void;
   aiEntryContext: AIEntryContext;
-  
+
   // Filtered results
   filteredPlaces: Business[];
   dealsByPlaceId: Map<string, Deal[]>;
   eventsByPlaceId: Map<string, Event[]>;
   visibleBusinesses: Business[];
-  
+
   // Callbacks
   handleExitAi: () => void;
 }
 
 const SearchContext = createContext<SearchContextType | null>(null);
 
-export function useSearch() {
+export function useSearch(): SearchContextType {
   const context = useContext(SearchContext);
   if (!context) {
     throw new Error('useSearch must be used within SearchProvider');
@@ -128,6 +134,10 @@ export function SearchProvider({
   const visibleBusinesses = filteredPlaces;
   
   const value: SearchContextType = {
+    allPlaces,
+    allDeals,
+    allEvents,
+    upcomingEventsCount,
     keyword,
     setKeyword,
     debouncedKeyword,
